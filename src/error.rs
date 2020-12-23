@@ -2,19 +2,17 @@ use std::error;
 use std::fmt;
 use std::str;
 
-use bnf::{
-    Error::ParseError,
-};
-
 #[derive(PartialEq, Debug, Clone)]
 pub enum Error {
     GrammarError(String),
+    InputRejected(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::GrammarError(ref s) => write!(f, "{}", s),
+            Error::InputRejected(ref s) => write!(f, "{}", s),
         }
     }
 }
