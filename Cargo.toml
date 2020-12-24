@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 bnf = "0.3.2"
+linked_hash_set = "0.1.4"
