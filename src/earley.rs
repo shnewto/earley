@@ -270,6 +270,8 @@ mod tests {
     use bnf::{Term, Grammar};
     use crate::earley::{State, EarleyParser};
     use linked_hash_set::LinkedHashSet;
+    use std::fs::File;
+    use std::io::prelude::*;
 
     fn wikipedia_example_state_00() -> Vec<State> {
 
@@ -530,7 +532,7 @@ mod tests {
 
         let s03_05 = State {
             origin: Some(0),
-            lhs: Some(Term::Nonterminal("T".to_string())),
+            lhs: Some(Term::Nonterminal("S".to_string())),
             terms: vec![Term::Nonterminal("S".to_string()), Term::Terminal("+".to_string()), Term::Nonterminal("M".to_string())],
             dot: Some(1),
         };
