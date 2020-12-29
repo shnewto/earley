@@ -140,7 +140,12 @@ fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<State> {
 }
 
 fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<State> {
-    sum_plus_prod(origin, dot) + sum_sub_prod(origin, dot)
+    let mut states: Vec<State> = vec![];
+
+    states.append(&mut sum_to_sum_plus_prod(origin, dot));
+    states.append(&mut sum_to_sum_sub_prod(origin, dot));
+
+    states
 }
 
 fn sum_to_prod(origin: usize, dot: usize) -> Vec<State> {
@@ -179,7 +184,12 @@ fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<State> {
 }
 
 fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<State> {
-    prod_mul_factor(origin, dot) + prod_div_factor(origin, dot)
+    let mut states: Vec<State> = vec![];
+
+    states.append(&mut prod_to_prod_mul_factor(origin, dot));
+    states.append(&mut prod_to_prod_div_factor(origin, dot));
+
+    states
 }
 
 fn prod_to_factor(origin: usize, dot: usize) -> Vec<State> {
