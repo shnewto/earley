@@ -1,7 +1,6 @@
 use crate::error::Error;
 use bnf::{Grammar, Term};
 use std::fmt;
-use std::fmt::Write;
 use std::str::FromStr;
 
 use linked_hash_set::LinkedHashSet;
@@ -11,7 +10,7 @@ pub struct EarleyParser {
     grammar: Grammar,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Debug, Hash, PartialEq)]
 pub struct State {
     pub origin: Option<usize>,
     pub lhs: Option<Term>,
@@ -126,13 +125,6 @@ fn hashset(data: &[State]) -> LinkedHashSet<State> {
     LinkedHashSet::from_iter(data.iter().cloned())
 }
 
-fn term_str(term: &Term) -> &String {
-    match term {
-        Term::Terminal(t) => t,
-        Term::Nonterminal(n) => n,
-    }
-}
-
 impl EarleyParser {
     pub fn new(grammar: Grammar) -> EarleyParser {
         EarleyParser { grammar }
@@ -233,31 +225,5 @@ impl FromStr for EarleyParser {
 impl fmt::Display for EarleyParser {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.grammar().to_string())
-    }
-}
-
-impl fmt::Debug for State {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let finished: String;
-        if let None = earley_next_element(self) {
-            finished = String::from("(complete)");
-        } else {
-            finished = String::from("");
-        }
-        let mut terms = String::new();
-        for term in &self.terms {
-            write!(terms, "{}", term_str(term))?;
-        }
-
-        terms.insert(self.dot.unwrap(), '•');
-
-        write!(
-            f,
-            "{} | {} -> {} {}",
-            self.origin.unwrap(),
-            term_str(&self.clone().lhs.unwrap()),
-            terms,
-            finished
-        )
     }
 }

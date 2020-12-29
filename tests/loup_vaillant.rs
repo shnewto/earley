@@ -11,10 +11,10 @@ fn loup_vaillant_example() {
     // Validate against example documented here https://loup-vaillant.fr/tutorials/earley-parsing/parser
 
     let grammar_str = "
-        <Sum> ::= <Sum> '+' <Product> | <Sum> '-' <Product> | <Product>
-        <Product> ::= <Product> '*' <Factor> | <Product> '/' <Factor> | <Factor>
-        <Factor> ::= '(' <Sum> ')' | <Number>
-        <Number> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+        <Sum> ::= <Sum> \"+\" <Product> | <Sum> \"-\" <Product> | <Product>
+        <Product> ::= <Product> \"*\" <Factor> | <Product> \"/\" <Factor> | <Factor>
+        <Factor> ::= \"(\" <Sum> \")\" | <Number>
+        <Number>  ::= \"0\" | \"1\" | \"2\" | \"3\" | \"4\" | \"5\" | \"6\" | \"7\" | \"8\" | \"9\" | \"0\" <Number> | \"1\" <Number> | \"2\" <Number> | \"3\" <Number> | \"4\" <Number> | \"5\" <Number> | \"6\" <Number> | \"7\" <Number> | \"8\" <Number> | \"9\" <Number>
         ";
 
     let sentence: String = "1+(2*3-4)".to_string();
@@ -142,8 +142,8 @@ fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<State> {
 fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut sum_to_sum_plus_prod(origin, dot));
     states.append(&mut sum_to_sum_sub_prod(origin, dot));
+    states.append(&mut sum_to_sum_plus_prod(origin, dot));
 
     states
 }
@@ -186,8 +186,8 @@ fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<State> {
 fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut prod_to_prod_mul_factor(origin, dot));
     states.append(&mut prod_to_prod_div_factor(origin, dot));
+    states.append(&mut prod_to_prod_mul_factor(origin, dot));
 
     states
 }
@@ -227,7 +227,7 @@ fn number_to_1(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("1".to_string())],
+        terms: vec![Term::Terminal("1".to_string())],
         dot: Some(dot),
     }]
 }
@@ -236,7 +236,7 @@ fn number_to_2(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("2".to_string())],
+        terms: vec![Term::Terminal("2".to_string())],
         dot: Some(dot),
     }]
 }
@@ -245,7 +245,7 @@ fn number_to_3(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("3".to_string())],
+        terms: vec![Term::Terminal("3".to_string())],
         dot: Some(dot),
     }]
 }
@@ -254,7 +254,7 @@ fn number_to_4(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("4".to_string())],
+        terms: vec![Term::Terminal("4".to_string())],
         dot: Some(dot),
     }]
 }
@@ -263,7 +263,7 @@ fn number_to_5(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("5".to_string())],
+        terms: vec![Term::Terminal("5".to_string())],
         dot: Some(dot),
     }]
 }
@@ -272,7 +272,7 @@ fn number_to_6(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("6".to_string())],
+        terms: vec![Term::Terminal("6".to_string())],
         dot: Some(dot),
     }]
 }
@@ -281,7 +281,7 @@ fn number_to_7(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("7".to_string())],
+        terms: vec![Term::Terminal("7".to_string())],
         dot: Some(dot),
     }]
 }
@@ -290,7 +290,7 @@ fn number_to_8(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("8".to_string())],
+        terms: vec![Term::Terminal("8".to_string())],
         dot: Some(dot),
     }]
 }
@@ -299,7 +299,7 @@ fn number_to_9(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Nonterminal("9".to_string())],
+        terms: vec![Term::Terminal("9".to_string())],
         dot: Some(dot),
     }]
 }
@@ -321,7 +321,7 @@ fn number_to_1_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("1".to_string()),
+            Term::Terminal("1".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -333,7 +333,7 @@ fn number_to_2_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("2".to_string()),
+            Term::Terminal("2".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -345,7 +345,7 @@ fn number_to_3_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("3".to_string()),
+            Term::Terminal("3".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -357,7 +357,7 @@ fn number_to_4_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("4".to_string()),
+            Term::Terminal("4".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -369,7 +369,7 @@ fn number_to_5_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("5".to_string()),
+            Term::Terminal("5".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -381,7 +381,7 @@ fn number_to_6_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("6".to_string()),
+            Term::Terminal("6".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -393,7 +393,7 @@ fn number_to_7_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("7".to_string()),
+            Term::Terminal("7".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -405,7 +405,7 @@ fn number_to_8_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("8".to_string()),
+            Term::Terminal("8".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -417,7 +417,7 @@ fn number_to_9_number(origin: usize, dot: usize) -> Vec<State> {
         origin: Some(origin),
         lhs: Some(Term::Nonterminal("Number".to_string())),
         terms: vec![
-            Term::Nonterminal("9".to_string()),
+            Term::Terminal("9".to_string()),
             Term::Nonterminal("Number".to_string()),
         ],
         dot: Some(dot),
@@ -436,16 +436,16 @@ fn factor_to_number(origin: usize, dot: usize) -> Vec<State> {
 fn number_to_digit(origin: usize, dot: usize) -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_0(origin, dot));
-    states.append(&mut number_to_1(origin, dot));
-    states.append(&mut number_to_2(origin, dot));
-    states.append(&mut number_to_3(origin, dot));
-    states.append(&mut number_to_4(origin, dot));
-    states.append(&mut number_to_5(origin, dot));
-    states.append(&mut number_to_6(origin, dot));
-    states.append(&mut number_to_7(origin, dot));
-    states.append(&mut number_to_8(origin, dot));
     states.append(&mut number_to_9(origin, dot));
+    states.append(&mut number_to_8(origin, dot));
+    states.append(&mut number_to_7(origin, dot));
+    states.append(&mut number_to_6(origin, dot));
+    states.append(&mut number_to_5(origin, dot));
+    states.append(&mut number_to_4(origin, dot));
+    states.append(&mut number_to_3(origin, dot));
+    states.append(&mut number_to_2(origin, dot));
+    states.append(&mut number_to_1(origin, dot));
+    states.append(&mut number_to_0(origin, dot));
 
     states
 }
@@ -453,16 +453,16 @@ fn number_to_digit(origin: usize, dot: usize) -> Vec<State> {
 fn number_to_digit_number(origin: usize, dot: usize) -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_0_number(origin, dot));
-    states.append(&mut number_to_1_number(origin, dot));
-    states.append(&mut number_to_2_number(origin, dot));
-    states.append(&mut number_to_3_number(origin, dot));
-    states.append(&mut number_to_4_number(origin, dot));
-    states.append(&mut number_to_5_number(origin, dot));
-    states.append(&mut number_to_6_number(origin, dot));
-    states.append(&mut number_to_7_number(origin, dot));
-    states.append(&mut number_to_8_number(origin, dot));
     states.append(&mut number_to_9_number(origin, dot));
+    states.append(&mut number_to_8_number(origin, dot));
+    states.append(&mut number_to_7_number(origin, dot));
+    states.append(&mut number_to_6_number(origin, dot));
+    states.append(&mut number_to_5_number(origin, dot));
+    states.append(&mut number_to_4_number(origin, dot));
+    states.append(&mut number_to_3_number(origin, dot));
+    states.append(&mut number_to_2_number(origin, dot));
+    states.append(&mut number_to_1_number(origin, dot));
+    states.append(&mut number_to_0_number(origin, dot));
 
     states
 }
@@ -470,14 +470,14 @@ fn number_to_digit_number(origin: usize, dot: usize) -> Vec<State> {
 fn loup_vaillant_example_state_00() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut sum_to_sum_plus_sub_prod(0, 0));
     states.append(&mut sum_to_prod(0, 0));
-    states.append(&mut prod_to_prod_mul_div_factor(0, 0));
     states.append(&mut prod_to_factor(0, 0));
-    states.append(&mut factor_to_lp_sum_rp(0, 0));
     states.append(&mut factor_to_number(0, 0));
     states.append(&mut number_to_digit_number(0, 0));
     states.append(&mut number_to_digit(0, 0));
+    states.append(&mut factor_to_lp_sum_rp(0, 0));
+    states.append(&mut prod_to_prod_mul_div_factor(0, 0));
+    states.append(&mut sum_to_sum_plus_sub_prod(0, 0));
 
     states
 }
@@ -485,10 +485,10 @@ fn loup_vaillant_example_state_00() -> Vec<State> {
 fn loup_vaillant_example_state_01() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_digit_number(0, 1));
-    states.append(&mut number_to_digit(0, 1));
-    states.append(&mut number_to_digit_number(1, 0));
+    states.append(&mut number_to_1(0, 1));
     states.append(&mut number_to_digit(1, 0));
+    states.append(&mut number_to_1_number(0, 1));
+    states.append(&mut number_to_digit_number(1, 0));
     states.append(&mut factor_to_number(0, 1));
     states.append(&mut prod_to_factor(0, 1));
     states.append(&mut sum_to_prod(0, 1));
@@ -501,7 +501,7 @@ fn loup_vaillant_example_state_01() -> Vec<State> {
 fn loup_vaillant_example_state_02() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut sum_to_sum_plus_sub_prod(0, 2));
+    states.append(&mut sum_to_sum_plus_prod(0, 2));
     states.append(&mut prod_to_prod_mul_div_factor(2, 0));
     states.append(&mut prod_to_factor(2, 0));
     states.append(&mut factor_to_lp_sum_rp(2, 0));
@@ -531,8 +531,8 @@ fn loup_vaillant_example_state_03() -> Vec<State> {
 fn loup_vaillant_example_state_04() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_digit_number(3, 1));
-    states.append(&mut number_to_digit(3, 1));
+    states.append(&mut number_to_2_number(3, 1));
+    states.append(&mut number_to_2(3, 1));
     states.append(&mut number_to_digit_number(4, 0));
     states.append(&mut number_to_digit(4, 0));
     states.append(&mut factor_to_number(3, 1));
@@ -548,7 +548,7 @@ fn loup_vaillant_example_state_04() -> Vec<State> {
 fn loup_vaillant_example_state_05() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut prod_to_prod_mul_div_factor(3, 2));
+    states.append(&mut prod_to_prod_mul_factor(3, 2));
     states.append(&mut factor_to_lp_sum_rp(5, 0));
     states.append(&mut factor_to_number(5, 0));
     states.append(&mut number_to_digit_number(5, 0));
@@ -560,12 +560,12 @@ fn loup_vaillant_example_state_05() -> Vec<State> {
 fn loup_vaillant_example_state_06() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_digit_number(5, 1));
-    states.append(&mut number_to_digit(5, 1));
+    states.append(&mut number_to_3_number(5, 1));
+    states.append(&mut number_to_3(5, 1));
     states.append(&mut number_to_digit_number(6, 0));
     states.append(&mut number_to_digit(6, 0));
     states.append(&mut factor_to_number(5, 1));
-    states.append(&mut prod_to_prod_mul_div_factor(3, 3));
+    states.append(&mut prod_to_prod_mul_factor(3, 3));
     states.append(&mut sum_to_prod(3, 1));
     states.append(&mut prod_to_prod_mul_div_factor(3, 1));
     states.append(&mut factor_to_lp_sum_rp(2, 2));
@@ -577,7 +577,7 @@ fn loup_vaillant_example_state_06() -> Vec<State> {
 fn loup_vaillant_example_state_07() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut sum_to_sum_plus_sub_prod(3, 2));
+    states.append(&mut sum_to_sum_sub_prod(3, 2));
     states.append(&mut prod_to_prod_mul_div_factor(7, 0));
     states.append(&mut prod_to_factor(7, 0));
     states.append(&mut factor_to_lp_sum_rp(7, 0));
@@ -591,13 +591,13 @@ fn loup_vaillant_example_state_07() -> Vec<State> {
 fn loup_vaillant_example_state_08() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
-    states.append(&mut number_to_digit_number(7, 1));
-    states.append(&mut number_to_digit(7, 1));
+    states.append(&mut number_to_4_number(7, 1));
+    states.append(&mut number_to_4(7, 1));
     states.append(&mut number_to_digit_number(8, 0));
     states.append(&mut number_to_digit(8, 0));
     states.append(&mut factor_to_number(7, 1));
     states.append(&mut prod_to_factor(7, 1));
-    states.append(&mut sum_to_sum_plus_sub_prod(3, 3));
+    states.append(&mut sum_to_sum_sub_prod(3, 3));
     states.append(&mut prod_to_prod_mul_div_factor(7, 1));
     states.append(&mut factor_to_lp_sum_rp(2, 2));
     states.append(&mut sum_to_sum_plus_sub_prod(3, 1));
@@ -609,8 +609,8 @@ fn loup_vaillant_example_state_09() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
     states.append(&mut factor_to_lp_sum_rp(2, 3));
-    states.append(&mut prod_to_factor(1, 1));
-    states.append(&mut sum_to_sum_plus_sub_prod(0, 3));
+    states.append(&mut prod_to_factor(2, 1));
+    states.append(&mut sum_to_sum_plus_prod(0, 3));
     states.append(&mut prod_to_prod_mul_div_factor(2, 1));
     states.append(&mut sum_to_sum_plus_sub_prod(0, 1));
 
