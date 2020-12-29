@@ -5,14 +5,14 @@ use std::str;
 #[derive(PartialEq, Debug, Clone)]
 pub enum Error {
     GrammarError(String),
-    InputRejected(String),
+    _InputRejected(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::GrammarError(ref s) => write!(f, "{}", s),
-            Error::InputRejected(ref s) => write!(f, "{}", s),
+            Error::_InputRejected(ref s) => write!(f, "{}", s),
         }
     }
 }

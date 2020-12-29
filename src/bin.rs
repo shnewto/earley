@@ -1,14 +1,12 @@
-mod earley;
-mod error;
-
 extern crate bnf;
+extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Grammar;
-use crate::earley::EarleyParser;
-use crate::error::Error;
+use earley::earley::EarleyParser;
+use earley::error::Error;
 
-fn level_one() -> Result<(), Error> {
+fn _level_one() -> Result<(), Error> {
     let grammar_str = "
     <P> ::= <S>
     <S> ::= <S> \"+\" <M> | <M>
@@ -24,7 +22,7 @@ fn level_one() -> Result<(), Error> {
     Ok(())
 }
 
-fn level_two() -> Result<(), Error> {
+fn _level_two() -> Result<(), Error> {
     let grammar_str = "
     <Sum> ::= <Sum> '+' <Product> | <Sum> '-' <Product> | <Product>
     <Product> ::= <Product> '*' <Factor> | <Product> '/' <Factor> | <Factor>
@@ -41,9 +39,7 @@ fn level_two() -> Result<(), Error> {
     Ok(())
 }
 
-fn main() -> Result<(), Error>{
-    level_one();
+fn main() -> Result<(), Error> {
+    _level_one()
     // level_two();
-
-    Ok(())
 }
