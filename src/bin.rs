@@ -5,9 +5,22 @@ extern crate linked_hash_set;
 use bnf::Grammar;
 use earley::earley::{EarleyParser, State};
 use earley::error::Error;
+use earley::tree::parse_forest;
 use linked_hash_set::LinkedHashSet;
 
-fn print_states(grammar: Grammar, states: Vec<LinkedHashSet<State>>) {
+fn _print_parse_forest(states: Vec<State>) {
+    for _f in states {
+        // println!("Successful Parse");
+        // let mut curr: Option<State> = Some(f);
+        //
+        // while let Some(s) = curr {
+        //     println!("{:#}", s);
+        //     curr = *s.parse_parent;
+        // }
+    }
+}
+
+fn _print_states(grammar: Grammar, states: Vec<LinkedHashSet<State>>) {
     println!("{}", grammar);
     for (i, state) in states.iter().enumerate() {
         println!("\n=== {} ===", i);
@@ -29,8 +42,10 @@ fn _level_one() -> Result<(), Error> {
     let grammar: Grammar = grammar_str.parse().unwrap();
     let mut eparser = EarleyParser::new(grammar.clone());
     let states = eparser.earley_parse(sentence)?;
-
-    print_states(grammar, states);
+    // _print_states(grammar.clone(), states.clone());
+    for parse in parse_forest(&grammar, states) {
+        println!("{:#?}", parse);
+    }
 
     Ok(())
 }
@@ -49,12 +64,16 @@ fn _level_two() -> Result<(), Error> {
     let mut eparser = EarleyParser::new(grammar.clone());
     let states = eparser.earley_parse(sentence)?;
 
-    print_states(grammar, states);
+    // _print_states(grammar, states);
+
+    for parse in parse_forest(&grammar, states) {
+        println!("{:#?}", parse);
+    }
 
     Ok(())
 }
 
 fn main() -> Result<(), Error> {
-    _level_one()
-    // _level_two()
+    // _level_one()
+    _level_two()
 }
