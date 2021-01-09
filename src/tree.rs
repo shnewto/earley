@@ -69,7 +69,11 @@ fn traverse_parse(
                     }
                 }
             }
+        } else if let Term::Terminal(_) = term {
+
         }
+
+
     }
 
     for term in terms.clone() {

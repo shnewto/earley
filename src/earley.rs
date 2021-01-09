@@ -7,6 +7,8 @@ use linked_hash_set::LinkedHashSet;
 use std::hash::Hash;
 use std::iter::FromIterator;
 
+use serde::{Deserialize, Serialize};
+
 pub struct EarleyParser {
     grammar: Grammar,
 }
@@ -19,7 +21,7 @@ pub struct State {
     pub dot: Option<usize>,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Node {
     pub term: Term,
     pub leaves: Vec<Node>,
