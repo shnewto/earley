@@ -13,7 +13,7 @@ pub struct EarleyParser {
     grammar: Grammar,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct State {
     pub origin: Option<usize>,
     pub lhs: Option<Term>,

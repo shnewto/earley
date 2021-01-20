@@ -8,7 +8,6 @@ use earley::error::Error;
 use earley::tree::parse_forest;
 use linked_hash_set::LinkedHashSet;
 
-use serde;
 use serde_json;
 
 fn _print_parse_forest(states: Vec<State>) {
@@ -69,9 +68,10 @@ fn _level_two() -> Result<(), Error> {
 
     // _print_states(grammar, states);
 
-
-    for parse in parse_forest(&grammar, states) {
-        println!("{:#?}", serde_json::to_string(&parse).unwrap());
+    // parse_forest(&grammar, states);
+    let forest = parse_forest(&grammar, states)?;
+    for tree in forest {
+        println!("{:#}", serde_json::to_string(&tree).unwrap());
     }
 
     Ok(())

@@ -489,8 +489,8 @@ fn loup_vaillant_example_state_01() -> Vec<State> {
     let mut states: Vec<State> = vec![];
 
     states.append(&mut number_to_1(0, 1));
-    states.append(&mut number_to_digit(1, 0));
     states.append(&mut number_to_1_number(0, 1));
+    states.append(&mut number_to_digit(1, 0));
     states.append(&mut number_to_digit_number(1, 0));
     states.append(&mut factor_to_number(0, 1));
     states.append(&mut prod_to_factor(0, 1));
