@@ -5,7 +5,6 @@ extern crate linked_hash_set;
 use bnf::Grammar;
 use earley::earley::{EarleyChart, State};
 use earley::error::Error;
-use linked_hash_set::LinkedHashSet;
 
 fn print_chart(grammar: Grammar, chart: Vec<Vec<State>>) {
     println!("{}", grammar);
