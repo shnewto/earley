@@ -7,12 +7,58 @@ use std::fmt;
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyChart;
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum EarleyOutcome {
+    Accepted(EarleyAccepted),
+    Rejected,
+}
+
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct EarleyAccepted {
+    pub chart: Vec<LinkedHashSet<State>>,
+    pub accepted_states: Vec<State>,
+    pub input: String,
+}
+
+impl EarleyAccepted {
+    pub fn new(chart: Vec<LinkedHashSet<State>>, accepted_states: Vec<State>, input: String) -> EarleyAccepted {
+        EarleyAccepted {
+            chart,
+            accepted_states,
+            input
+        }
+    }
+
+    pub fn parse_forest(&self) {
+        // println!("accepted states len in parse_forest {}", self.accepted_states.len());
+        for accepted_state in &self.accepted_states {
+            println!("accepted state {}", accepted_state);
+        }
+    }
+}
+
+
 impl EarleyChart {
     pub fn eval(grammar: &str, input: &str) -> Result<EarleyOutcome, Error> {
         let parser = EarleyParser::new(grammar, input)?;
-        let ret = parser.earley_parse()?;
+        let outcome = parser.earley_parse()?;
 
-        Ok(ret)
+        // if let EarleyOutcome::Accepted(accepted) = &outcome {
+        //     accepted.parse_forest();
+        // }
+
+        Ok(outcome.clone())
+    }
+
+    pub fn accept(grammar: &str, input: &str) -> Result<bool, Error> {
+        let parser = EarleyParser::new(grammar, input)?;
+        let res = parser.earley_parse()?;
+        if let EarleyOutcome::Accepted(_) = res {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }
 
@@ -73,26 +119,8 @@ impl EarleyProd {
 pub struct EarleyParser {
     input: String,
     grammar: Grammar,
-    // start_states: LinkedHashSet<State>,
-}
-
-pub struct EarleyAccepted {
-    pub chart: Vec<LinkedHashSet<State>>,
-    pub accepted_states: Vec<State>,
-}
-
-impl EarleyAccepted {
-    pub fn new(chart: Vec<LinkedHashSet<State>>, accepted_states: Vec<State>) -> EarleyAccepted {
-        EarleyAccepted {
-            chart,
-            accepted_states,
-        }
-    }
-}
-
-pub enum EarleyOutcome {
-    Accepted(EarleyAccepted),
-    Rejected,
+    // completed_states: LinkedHashSet<State>,
+    // chart
 }
 
 impl EarleyParser {
@@ -128,7 +156,7 @@ impl EarleyParser {
 
         let mut chart: Vec<LinkedHashSet<State>> =
             vec![LinkedHashSet::new(); input_symbols.len() + 1];
-        chart[0] = start_states;
+        chart[0] = start_states.clone();
 
         for k in 0..chart.len() {
             let mut unchanged = LinkedHashSet::new();
@@ -144,30 +172,43 @@ impl EarleyParser {
             }
         }
 
-        if let Some(accepted_states) = self.get_accepted(chart.iter().next(), chart.last()) {
-            Ok(EarleyOutcome::Accepted(EarleyAccepted::new(chart, accepted_states)))
+        if let Some(accepted_states) = self.get_accepted(&start_states, chart.last(), input_symbols.len(), chart.len()) {
+            // println!("accepted_states first len {}", accepted_states.len());
+            Ok(EarleyOutcome::Accepted(EarleyAccepted::new(chart, accepted_states, self.input)))
         } else {
             Ok(EarleyOutcome::Rejected)
         }
     }
 
-    fn get_accepted(&self, start_states: Option<&LinkedHashSet<State>>, final_chart_states: Option<&LinkedHashSet<State>>) -> Option<Vec<State>> {
+    fn get_accepted(&self, start_states: &LinkedHashSet<State>,
+                    final_chart_states: Option<&LinkedHashSet<State>>, input_len: usize, chart_len: usize) -> Option<Vec<State>> {
+
+        if input_len + 1 != chart_len {
+            return None
+        }
 
         let mut completed: Vec<State> = vec![];
-        match (start_states, final_chart_states) {
-            (Some(states_a), Some(states_b)) => {
+        match final_chart_states {
+            Some(final_states) => {
 
-                for state_a in states_a {
-                    let find = states_b.iter().find(|state_b| {
-                        state_a.prod.lhs == state_b.prod.lhs && state_a.prod.rhs == state_b.prod.rhs
+                for start_state in start_states {
+                    let find = final_states.iter().find(|final_state| {
+                        final_state.origin == 0
+                        && final_state.prod.dot == final_state.prod.rhs.len()
+                        && start_state.prod.lhs == final_state.prod.lhs
+                        && start_state.prod.rhs == final_state.prod.rhs
                     });
 
                     if let Some(found) = find {
+                        // println!("adding {} to accepted states", found);
                         completed.push(found.clone());
                     }
                 }
-
-                Some(completed)
+                if completed.is_empty() {
+                    None
+                } else {
+                    Some(completed)
+                }
             },
             _ => None
         }
