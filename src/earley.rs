@@ -8,15 +8,9 @@ use std::fmt;
 pub struct EarleyChart;
 
 impl EarleyChart {
-    pub fn eval(grammar: &str, input: &str) -> Result<Vec<Vec<State>>, Error> {
+    pub fn eval(grammar: &str, input: &str) -> Result<EarleyOutcome, Error> {
         let parser = EarleyParser::new(grammar, input)?;
-        let chart = parser.earley_parse()?;
-        let mut ret: Vec<Vec<State>> = vec![];
-
-        for state_set in chart {
-            let states = state_set.iter().cloned().collect::<Vec<State>>();
-            ret.push(states);
-        }
+        let ret = parser.earley_parse()?;
 
         Ok(ret)
     }
@@ -71,14 +65,34 @@ impl EarleyProd {
     pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize) -> EarleyProd {
         EarleyProd { lhs, rhs, dot }
     }
-
     pub fn get_next(&self) -> Option<&Term> {
         self.rhs.get(self.dot)
     }
 }
+
 pub struct EarleyParser {
     input: String,
     grammar: Grammar,
+    // start_states: LinkedHashSet<State>,
+}
+
+pub struct EarleyAccepted {
+    pub chart: Vec<LinkedHashSet<State>>,
+    pub accepted_states: Vec<State>,
+}
+
+impl EarleyAccepted {
+    pub fn new(chart: Vec<LinkedHashSet<State>>, accepted_states: Vec<State>) -> EarleyAccepted {
+        EarleyAccepted {
+            chart,
+            accepted_states,
+        }
+    }
+}
+
+pub enum EarleyOutcome {
+    Accepted(EarleyAccepted),
+    Rejected,
 }
 
 impl EarleyParser {
@@ -86,10 +100,11 @@ impl EarleyParser {
         Ok(EarleyParser {
             input: input.to_string(),
             grammar: grammar.parse()?,
+            // start_states: LinkedHashSet::new(),
         })
     }
 
-    pub fn earley_parse(&self) -> Result<Vec<LinkedHashSet<State>>, Error> {
+    pub fn earley_parse(self) -> Result<EarleyOutcome, Error> {
         let get_start_states = || match self.grammar.productions_iter().peekable().peek() {
             Some(p) => {
                 let mut state_set: LinkedHashSet<State> = LinkedHashSet::new();
@@ -129,7 +144,33 @@ impl EarleyParser {
             }
         }
 
-        Ok(chart)
+        if let Some(accepted_states) = self.get_accepted(chart.iter().next(), chart.last()) {
+            Ok(EarleyOutcome::Accepted(EarleyAccepted::new(chart, accepted_states)))
+        } else {
+            Ok(EarleyOutcome::Rejected)
+        }
+    }
+
+    fn get_accepted(&self, start_states: Option<&LinkedHashSet<State>>, final_chart_states: Option<&LinkedHashSet<State>>) -> Option<Vec<State>> {
+
+        let mut completed: Vec<State> = vec![];
+        match (start_states, final_chart_states) {
+            (Some(states_a), Some(states_b)) => {
+
+                for state_a in states_a {
+                    let find = states_b.iter().find(|state_b| {
+                        state_a.prod.lhs == state_b.prod.lhs && state_a.prod.rhs == state_b.prod.rhs
+                    });
+
+                    if let Some(found) = find {
+                        completed.push(found.clone());
+                    }
+                }
+
+                Some(completed)
+            },
+            _ => None
+        }
     }
 
     /// Prediction:

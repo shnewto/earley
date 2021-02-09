@@ -3,7 +3,7 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Term;
-use earley::earley::{EarleyChart, EarleyProd, State};
+use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome};
 use linked_hash_set::LinkedHashSet;
 
 #[test]
@@ -21,15 +21,15 @@ fn loup_vaillant_example() {
         ";
 
     let sentence = "1+(2*3-4)";
-    let expected: Vec<LinkedHashSet<State>> = loup_vaillant_example_states()
+    let expected= loup_vaillant_example_states()
         .iter()
         .map(|state_set| state_set.iter().cloned().collect())
         .collect::<Vec<LinkedHashSet<State>>>();
-    let actual: Vec<LinkedHashSet<State>> = EarleyChart::eval(grammar_str, sentence)
-        .unwrap()
-        .iter()
-        .map(|state_set| state_set.iter().cloned().collect())
-        .collect::<Vec<LinkedHashSet<State>>>();
+
+    let mut actual : Vec<LinkedHashSet<State>> = vec![];
+    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
+        actual = res.chart;
+    }
 
     assert_eq!(expected, actual);
 }
