@@ -9,7 +9,7 @@ pub struct EarleyChart;
 
 impl EarleyChart {
     pub fn eval(grammar: &str, input: &str) -> Result<Vec<Vec<State>>, Error> {
-        let parser = EarlyParser::new(grammar, input)?;
+        let parser = EarleyParser::new(grammar, input)?;
         let chart = parser.earley_parse()?;
         let mut ret: Vec<Vec<State>> = vec![];
 
@@ -76,14 +76,14 @@ impl EarleyProd {
         self.rhs.get(self.dot)
     }
 }
-pub struct EarlyParser {
+pub struct EarleyParser {
     input: String,
     grammar: Grammar,
 }
 
-impl EarlyParser {
-    pub fn new(grammar: &str, input: &str) -> Result<EarlyParser, Error> {
-        Ok(EarlyParser {
+impl EarleyParser {
+    pub fn new(grammar: &str, input: &str) -> Result<EarleyParser, Error> {
+        Ok(EarleyParser {
             input: input.to_string(),
             grammar: grammar.parse()?,
         })
