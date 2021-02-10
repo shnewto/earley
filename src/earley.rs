@@ -270,7 +270,6 @@ impl fmt::Display for EarleyProd {
             f,
             "{} := {}",
             self.lhs,
-            // self.rhs.iter().fold(String::new(), |acc, t| format!("{}] {} {}", self.idx, acc, t))
             self.rhs.iter().fold(String::new(), |acc, t| format!("{} {}", acc, t))
         )
     }
@@ -302,25 +301,17 @@ impl fmt::Display for State {
     }
 }
 
-// #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
-// pub struct EarleyProd {
-//     pub lhs: Term,
-//     pub rhs: Vec<Term>,
-//     pub dot: usize,
-//     pub idx: usize,
-// }
-
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyProd {
     pub lhs: Term,
     pub rhs: Vec<Term>,
     pub dot: usize,
+    pub idx1234: usize, // weird name, just in case there's some shadowing causing the hang
 }
 
-
 impl EarleyProd {
-    pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize) -> EarleyProd {
-        EarleyProd { lhs, rhs, dot }
+    pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize, idx1234: usize) -> EarleyProd {
+        EarleyProd { lhs, rhs, dot, idx1234 }
     }
     pub fn get_next(&self) -> Option<&Term> {
         self.rhs.get(self.dot)
@@ -349,7 +340,7 @@ impl EarleyParser {
                 let mut state_set: LinkedHashSet<State> = LinkedHashSet::new();
                 for expr in p.rhs_iter() {
                     let terms = expr.terms_iter().cloned().collect::<Vec<Term>>();
-                    let prod = EarleyProd::new((p.lhs).clone(), terms, 0);
+                    let prod = EarleyProd::new((p.lhs).clone(), terms, 0, 0);
                     let state = State::new(prod, 0);
                     state_set.insert(state);
                 }
@@ -457,7 +448,7 @@ impl EarleyParser {
 
         let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
 
-        for (_chart_pos, state) in state_set.iter().enumerate() {
+        for (chart_pos, state) in state_set.iter().enumerate() {
             if let Some(term) = state.prod.get_next() {
                 if let Term::Nonterminal(_) = term {
                     // let prods = self.find_productions_in_grammar(term);
@@ -465,7 +456,7 @@ impl EarleyParser {
                         let exprs = p.rhs_iter().cloned().collect::<Vec<Expression>>();
                         exprs.iter().for_each(|e| {
                             let rhs = e.terms_iter().cloned().collect::<Vec<Term>>();
-                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0);
+                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0, 0);
                             ret_state_set.insert(State::new(earley_prod, k));
                         });
                     });
