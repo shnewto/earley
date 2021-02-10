@@ -3,17 +3,29 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Grammar;
-use earley::earley::{EarleyParser, State};
+use earley::earley::{EarleyChart, EarleyOutcome};
 use earley::error::Error;
-use linked_hash_set::LinkedHashSet;
 
-fn print_states(grammar: Grammar, states: Vec<LinkedHashSet<State>>) {
+fn _print_chart(grammar: Grammar, outcome: EarleyOutcome) {
     println!("{}", grammar);
-    for (i, state) in states.iter().enumerate() {
-        println!("\n=== {} ===", i);
-        for s in state.iter() {
-            println!("{}", s);
+
+    if let EarleyOutcome::Accepted(accepted) = outcome {
+        for (i, states) in accepted.chart.iter().enumerate() {
+            println!("\n=== {} ===", i);
+            for state in states.iter() {
+                println!("{}", state);
+            }
         }
+    } else {
+        println!("input was rejected");
+    }
+}
+
+fn _print_parse_forest(outcome: &EarleyOutcome) {
+    if let EarleyOutcome::Accepted(accepted) = outcome {
+       accepted.parse_forest();
+    } else {
+        println!("input was rejected");
     }
 }
 
@@ -24,14 +36,10 @@ fn _level_one() -> Result<(), Error> {
     <M> ::= <M> \"*\" <T> | <T>
     <T> ::= \"1\" | \"2\" | \"3\" | \"4\"
     ";
-    let sentence: String = "2+3*4".to_string();
 
-    let grammar: Grammar = grammar_str.parse().unwrap();
-    let mut eparser = EarleyParser::new(grammar.clone());
-    let states = eparser.earley_parse(sentence)?;
-
-    print_states(grammar, states);
-
+    let sentence = "2+3*4";
+    let chart = EarleyChart::eval(grammar_str, sentence)?;
+    _print_chart(grammar_str.parse().unwrap(), chart);
     Ok(())
 }
 
@@ -43,18 +51,16 @@ fn _level_two() -> Result<(), Error> {
     <Number> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
     ";
 
-    let sentence = "1+(2*3-4)".to_string();
+    let sentence = "1+(2*3-4)";
+    let outcome = EarleyChart::eval(grammar_str, sentence)?;
 
-    let grammar: Grammar = grammar_str.parse().unwrap();
-    let mut eparser = EarleyParser::new(grammar.clone());
-    let states = eparser.earley_parse(sentence)?;
-
-    print_states(grammar, states);
+    _print_parse_forest(&outcome);
+    // _print_chart(grammar_str.parse().unwrap(), outcome);
 
     Ok(())
 }
 
 fn main() -> Result<(), Error> {
-    _level_one()
-    // _level_two()
+    // _level_one()
+    _level_two()
 }

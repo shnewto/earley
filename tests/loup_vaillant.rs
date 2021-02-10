@@ -2,8 +2,8 @@ extern crate bnf;
 extern crate earley;
 extern crate linked_hash_set;
 
-use bnf::{Grammar, Term};
-use earley::earley::{EarleyParser, State};
+use bnf::Term;
+use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome};
 use linked_hash_set::LinkedHashSet;
 
 #[test]
@@ -20,86 +20,89 @@ fn loup_vaillant_example() {
         <Number>  ::= \"0\" | \"1\" | \"2\" | \"3\" | \"4\" | \"5\" | \"6\" | \"7\" | \"8\" | \"9\"
         ";
 
-    let sentence: String = "1+(2*3-4)".to_string();
+    let sentence = "1+(2*3-4)";
+    let expected= loup_vaillant_example_states()
+        .iter()
+        .map(|state_set| state_set.iter().cloned().collect())
+        .collect::<Vec<LinkedHashSet<State>>>();
 
-    let expect = loup_vaillant_example_states();
+    let mut actual : Vec<LinkedHashSet<State>> = vec![];
+    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
+        actual = res.chart;
+    }
 
-    let grammar: Grammar = grammar_str.parse().unwrap();
-    let mut eparser = EarleyParser::new(grammar);
-    let actual = eparser.earley_parse(sentence).unwrap();
-
-    assert_eq!(expect, actual);
+    assert_eq!(expected, actual);
 }
 
-fn loup_vaillant_example_states() -> Vec<LinkedHashSet<State>> {
+fn loup_vaillant_example_states() -> Vec<Vec<State>> {
     let state_00 = loup_vaillant_example_state_00();
-    let mut state_00_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_00_hs: Vec<State> = vec![];
 
     for s in state_00 {
-        state_00_hs.insert(s);
+        state_00_hs.push(s);
     }
 
     let state_01 = loup_vaillant_example_state_01();
-    let mut state_01_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_01_hs: Vec<State> = vec![];
 
     for s in state_01 {
-        state_01_hs.insert(s);
+        state_01_hs.push(s);
     }
 
     let state_02 = loup_vaillant_example_state_02();
-    let mut state_02_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_02_hs: Vec<State> = vec![];
 
     for s in state_02 {
-        state_02_hs.insert(s);
+        state_02_hs.push(s);
     }
 
     let state_03 = loup_vaillant_example_state_03();
-    let mut state_03_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_03_hs: Vec<State> = vec![];
 
     for s in state_03 {
-        state_03_hs.insert(s);
+        state_03_hs.push(s);
     }
 
     let state_04 = loup_vaillant_example_state_04();
-    let mut state_04_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_04_hs: Vec<State> = vec![];
 
     for s in state_04 {
-        state_04_hs.insert(s);
+        state_04_hs.push(s);
     }
 
     let state_05 = loup_vaillant_example_state_05();
-    let mut state_05_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_05_hs: Vec<State> = vec![];
 
     for s in state_05 {
-        state_05_hs.insert(s);
+        state_05_hs.push(s);
     }
 
     let state_06 = loup_vaillant_example_state_06();
-    let mut state_06_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_06_hs: Vec<State> = vec![];
 
     for s in state_06 {
-        state_06_hs.insert(s);
+        state_06_hs.push(s);
     }
 
     let state_07 = loup_vaillant_example_state_07();
-    let mut state_07_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_07_hs: Vec<State> = vec![];
 
     for s in state_07 {
-        state_07_hs.insert(s);
+        state_07_hs.push(s);
     }
 
     let state_08 = loup_vaillant_example_state_08();
-    let mut state_08_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_08_hs: Vec<State> = vec![];
 
     for s in state_08 {
-        state_08_hs.insert(s);
+        state_08_hs.push(s);
     }
 
     let state_09 = loup_vaillant_example_state_09();
-    let mut state_09_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_09_hs: Vec<State> = vec![];
 
     for s in state_09 {
-        state_09_hs.insert(s);
+        state_09_hs.push(s);
     }
 
     vec![
@@ -118,27 +121,31 @@ fn loup_vaillant_example_states() -> Vec<LinkedHashSet<State>> {
 
 fn sum_to_sum_plus_prod(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Sum".to_string())),
-        terms: vec![
-            Term::Nonterminal("Sum".to_string()),
-            Term::Terminal("+".to_string()),
-            Term::Nonterminal("Product".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Sum".to_string()),
+            rhs: vec![
+                Term::Nonterminal("Sum".to_string()),
+                Term::Terminal("+".to_string()),
+                Term::Nonterminal("Product".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Sum".to_string())),
-        terms: vec![
-            Term::Nonterminal("Sum".to_string()),
-            Term::Terminal("-".to_string()),
-            Term::Nonterminal("Product".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Sum".to_string()),
+            rhs: vec![
+                Term::Nonterminal("Sum".to_string()),
+                Term::Terminal("-".to_string()),
+                Term::Nonterminal("Product".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
@@ -153,36 +160,42 @@ fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<State> {
 
 fn sum_to_prod(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Sum".to_string())),
-        terms: vec![Term::Nonterminal("Product".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Sum".to_string()),
+            rhs: vec![Term::Nonterminal("Product".to_string())],
+            dot,
+        },
     }]
 }
 
 fn prod_to_prod_mul_factor(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Product".to_string())),
-        terms: vec![
-            Term::Nonterminal("Product".to_string()),
-            Term::Terminal("*".to_string()),
-            Term::Nonterminal("Factor".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Product".to_string()),
+            rhs: vec![
+                Term::Nonterminal("Product".to_string()),
+                Term::Terminal("*".to_string()),
+                Term::Nonterminal("Factor".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Product".to_string())),
-        terms: vec![
-            Term::Nonterminal("Product".to_string()),
-            Term::Terminal("/".to_string()),
-            Term::Nonterminal("Factor".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Product".to_string()),
+            rhs: vec![
+                Term::Nonterminal("Product".to_string()),
+                Term::Terminal("/".to_string()),
+                Term::Nonterminal("Factor".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
@@ -197,242 +210,288 @@ fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<State> {
 
 fn prod_to_factor(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Product".to_string())),
-        terms: vec![Term::Nonterminal("Factor".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Product".to_string()),
+            rhs: vec![Term::Nonterminal("Factor".to_string())],
+            dot,
+        },
     }]
 }
 
 fn factor_to_lp_sum_rp(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Factor".to_string())),
-        terms: vec![
-            Term::Terminal("(".to_string()),
-            Term::Nonterminal("Sum".to_string()),
-            Term::Terminal(")".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Factor".to_string()),
+            rhs: vec![
+                Term::Terminal("(".to_string()),
+                Term::Nonterminal("Sum".to_string()),
+                Term::Terminal(")".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_0(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("0".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("0".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_1(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("1".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("1".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_2(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("2".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("2".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_3(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("3".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("3".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_4(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("4".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("4".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_5(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("5".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("5".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_6(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("6".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("6".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_7(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("7".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("7".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_8(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("8".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("8".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_9(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![Term::Terminal("9".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![Term::Terminal("9".to_string())],
+            dot,
+        },
     }]
 }
 
 fn number_to_0_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("0".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("0".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_1_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("1".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("1".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_2_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("2".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("2".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_3_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("3".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("3".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_4_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("4".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("4".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_5_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("5".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("5".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_6_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("6".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("6".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_7_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("7".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("7".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_8_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("8".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("8".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn number_to_9_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Number".to_string())),
-        terms: vec![
-            Term::Terminal("9".to_string()),
-            Term::Nonterminal("Number".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Number".to_string()),
+            rhs: vec![
+                Term::Terminal("9".to_string()),
+                Term::Nonterminal("Number".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn factor_to_number(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("Factor".to_string())),
-        terms: vec![Term::Nonterminal("Number".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("Factor".to_string()),
+            rhs: vec![Term::Nonterminal("Number".to_string())],
+            dot,
+        },
     }]
 }
 

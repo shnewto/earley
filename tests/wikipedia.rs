@@ -2,8 +2,8 @@ extern crate bnf;
 extern crate earley;
 extern crate linked_hash_set;
 
-use bnf::{Grammar, Term};
-use earley::earley::{EarleyParser, State};
+use bnf::Term;
+use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome};
 use linked_hash_set::LinkedHashSet;
 
 // Begin Wikipedia Example Test
@@ -16,58 +16,63 @@ fn wikipedia_example() {
         <M> ::= <M> \"*\" <T> | <T>
         <T> ::= \"1\" | \"2\" | \"3\" | \"4\"
         ";
-    let sentence: String = "2+3*4".to_string();
 
-    let expect = wikipedia_example_states();
+    let sentence = "2+3*4";
+    let expected: Vec<LinkedHashSet<State>> = wikipedia_example_states()
+        .iter()
+        .map(|state_set| state_set.iter().cloned().collect())
+        // .cloned()
+        .collect::<Vec<LinkedHashSet<State>>>();
 
-    let grammar: Grammar = grammar_str.parse().unwrap();
-    let mut eparser = EarleyParser::new(grammar);
-    let actual = eparser.earley_parse(sentence).unwrap();
+    let mut actual : Vec<LinkedHashSet<State>> = vec![];
+    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
+        actual = res.chart;
+    }
 
-    assert_eq!(expect, actual);
+    assert_eq!(expected, actual);
 }
 
-fn wikipedia_example_states() -> Vec<LinkedHashSet<State>> {
+fn wikipedia_example_states() -> Vec<Vec<State>> {
     let state_00 = wikipedia_example_state_00();
-    let mut state_00_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_00_hs: Vec<State> = vec![];
 
     for s in state_00 {
-        state_00_hs.insert(s);
+        state_00_hs.push(s);
     }
 
     let state_01 = wikipedia_example_state_01();
-    let mut state_01_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_01_hs: Vec<State> = vec![];
 
     for s in state_01 {
-        state_01_hs.insert(s);
+        state_01_hs.push(s);
     }
 
     let state_02 = wikipedia_example_state_02();
-    let mut state_02_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_02_hs: Vec<State> = vec![];
 
     for s in state_02 {
-        state_02_hs.insert(s);
+        state_02_hs.push(s);
     }
 
     let state_03 = wikipedia_example_state_03();
-    let mut state_03_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_03_hs: Vec<State> = vec![];
 
     for s in state_03 {
-        state_03_hs.insert(s);
+        state_03_hs.push(s);
     }
 
     let state_04 = wikipedia_example_state_04();
-    let mut state_04_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_04_hs: Vec<State> = vec![];
 
     for s in state_04 {
-        state_04_hs.insert(s);
+        state_04_hs.push(s);
     }
 
     let state_05 = wikipedia_example_state_05();
-    let mut state_05_hs: LinkedHashSet<State> = LinkedHashSet::new();
+    let mut state_05_hs: Vec<State> = vec![];
 
     for s in state_05 {
-        state_05_hs.insert(s);
+        state_05_hs.push(s);
     }
 
     vec![
@@ -82,54 +87,64 @@ fn wikipedia_example_states() -> Vec<LinkedHashSet<State>> {
 
 fn p_to_s(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("P".to_string())),
-        terms: vec![Term::Nonterminal("S".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("P".to_string()),
+            rhs: vec![Term::Nonterminal("S".to_string())],
+            dot,
+        },
     }]
 }
 
 fn s_to_s_plus_m(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("S".to_string())),
-        terms: vec![
-            Term::Nonterminal("S".to_string()),
-            Term::Terminal("+".to_string()),
-            Term::Nonterminal("M".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("S".to_string()),
+            rhs: vec![
+                Term::Nonterminal("S".to_string()),
+                Term::Terminal("+".to_string()),
+                Term::Nonterminal("M".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn s_to_m(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("S".to_string())),
-        terms: vec![Term::Nonterminal("M".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("S".to_string()),
+            rhs: vec![Term::Nonterminal("M".to_string())],
+            dot,
+        },
     }]
 }
 
 fn m_to_m_mul_t(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("M".to_string())),
-        terms: vec![
-            Term::Nonterminal("M".to_string()),
-            Term::Terminal("*".to_string()),
-            Term::Nonterminal("T".to_string()),
-        ],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("M".to_string()),
+            rhs: vec![
+                Term::Nonterminal("M".to_string()),
+                Term::Terminal("*".to_string()),
+                Term::Nonterminal("T".to_string()),
+            ],
+            dot,
+        },
     }]
 }
 
 fn m_to_t(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("M".to_string())),
-        terms: vec![Term::Nonterminal("T".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("M".to_string()),
+            rhs: vec![Term::Nonterminal("T".to_string())],
+            dot,
+        },
     }]
 }
 
@@ -146,37 +161,45 @@ fn t_to_number(origin: usize, dot: usize) -> Vec<State> {
 
 fn t_to_1(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("T".to_string())),
-        terms: vec![Term::Terminal("1".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("T".to_string()),
+            rhs: vec![Term::Terminal("1".to_string())],
+            dot,
+        },
     }]
 }
 
 fn t_to_2(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("T".to_string())),
-        terms: vec![Term::Terminal("2".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("T".to_string()),
+            rhs: vec![Term::Terminal("2".to_string())],
+            dot,
+        },
     }]
 }
 
 fn t_to_3(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("T".to_string())),
-        terms: vec![Term::Terminal("3".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("T".to_string()),
+            rhs: vec![Term::Terminal("3".to_string())],
+            dot,
+        },
     }]
 }
 
 fn t_to_4(origin: usize, dot: usize) -> Vec<State> {
     vec![State {
-        origin: Some(origin),
-        lhs: Some(Term::Nonterminal("T".to_string())),
-        terms: vec![Term::Terminal("4".to_string())],
-        dot: Some(dot),
+        origin,
+        prod: EarleyProd {
+            lhs: Term::Nonterminal("T".to_string()),
+            rhs: vec![Term::Terminal("4".to_string())],
+            dot,
+        },
     }]
 }
 

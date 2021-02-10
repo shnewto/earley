@@ -1,287 +1,417 @@
 use crate::error::Error;
-use bnf::{Grammar, Term, Production};
-use std::fmt;
-use std::str::FromStr;
-
+use bnf::{Expression, Grammar, Production, Term};
 use linked_hash_set::LinkedHashSet;
-use std::iter::FromIterator;
-use std::hash::{Hasher, Hash};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
-pub struct EarleyParser {
-    grammar: Grammar,
-}
+// #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+// pub struct Tree {
+//     root: Term,
+//     leaves: Vec<Term>
+// }
 
-#[derive(Clone, Debug)]
-pub struct State {
-    pub origin: Option<usize>,
-    pub lhs: Option<Term>,
-    pub terms: Vec<Term>,
-    pub dot: Option<usize>,
-    pub parse_parent: Box<Option<State>>,
-}
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct EarleyChart;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct Node {
-    term: Term,
-    leaves: Vec<Node>,
+pub enum EarleyOutcome {
+    Accepted(EarleyAccepted),
+    Rejected,
 }
 
-#[derive(Clone, Eq, Debug, Hash, PartialEq)]
-struct ParseForest {
-    state: State,
-    i: usize,
-    j: usize,
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct EarleyAccepted {
+    pub chart: Vec<LinkedHashSet<State>>,
+    pub accepted_states: Vec<State>,
+    pub input: String,
 }
 
-fn earley_predictor(term: &Term, k: usize, grammar: &Grammar) -> LinkedHashSet<State> {
-    let mut productions: LinkedHashSet<State> = LinkedHashSet::new();
-
-    for prod in grammar.productions_iter() {
-        if prod.lhs == *term {
-            for expr in prod.rhs_iter() {
-                productions.insert(State {
-                    origin: Some(k),
-                    lhs: Some(prod.lhs.clone()),
-                    terms: expr.terms_iter().cloned().collect::<Vec<_>>(),
-                    dot: Some(0),
-                    parse_parent: Box::new(None),
-                });
-            }
+impl EarleyAccepted {
+    pub fn new(chart: Vec<LinkedHashSet<State>>, accepted_states: Vec<State>, input: String) -> EarleyAccepted {
+        EarleyAccepted {
+            chart,
+            accepted_states,
+            input
         }
     }
 
-    productions
-}
-
-fn earley_scanner(
-    term: &Term,
-    k: usize,
-    words: &String,
-    grammar: &Grammar,
-    production: &State,
-) -> LinkedHashSet<State> {
-    let mut pattern: String = String::new();
-    let mut matches: LinkedHashSet<State> = LinkedHashSet::new();
-    for (_, c) in words[k..].chars().enumerate() {
-        pattern.push(c);
-        for prod in grammar.productions_iter() {
-            for expr in prod.rhs_iter() {
-                for t in expr.terms_iter() {
-                    if let Term::Terminal(ref s) = *t {
-                        if t == term {
-                            if pattern == *s {
-                                let mut update = production.clone();
-                                if let Some(dot) = update.dot {
-                                    update.dot = Some(dot + 1);
-                                }
-                                update.parse_parent = Some(production.clone()).into();
-                                matches.insert(update);
-                            }
+    fn get_next_index(&self, term: &Term, index: usize, chart: &[Vec<State>]) -> Option<usize> {
+        match term {
+            Term::Nonterminal(_) => {
+                // println!("looking for {} at {}", term, index);
+                for state_set in chart.get(index) {
+                    for state in state_set {
+                        if state.prod.lhs == *term {
+                            println!("->  '{}' in '{}'", term, state);
+                            return Some(state.origin);
+                        } else {
+                            // println!("wasn't {}", term);
                         }
                     }
                 }
+            },
+            Term::Terminal(val) => {
+                let start: usize = if index == 0 { 0 } else { index - 1 };
+                let end: usize = index;
+                let chars: Vec<String> = self.input.chars().map(|c| c.to_string()).collect();
+                if let Some(c) = chars.get(start) {
+                    if c == val {
+                        println!("->  '{}'", term);
+                        return Some(start)
+                    }
+                } else if let Some(c) = chars.get(end )  {
+                    println!("->  '{}'", term);
+                    if c == val {
+                        return Some(end)
+                    }
+                }
+            },
+        }
+
+        None
+
+    }
+
+    fn construct(&self, state: &State, chart: &[Vec<State>]) {
+        let mut stack = state.prod.rhs.clone();
+        let mut pos = chart.len() - 1;
+        while let Some(t) = stack.pop() {
+            // println!("\n\nlooking for {} at {}", t, pos);
+            if let Some(i) = self.get_next_index(&t, pos, chart) {
+                pos = i;
+            } else {
+                // println!("couldn't find '{}'!", t);
             }
         }
     }
 
-    matches
-}
+    pub fn parse_forest(&self) {
+        let mut only_completed = vec![];
+        for state_sets in &self.chart {
+            let mut reduced = vec![];
 
-fn earley_completer(productions: &LinkedHashSet<State>, finished: &State) -> LinkedHashSet<State> {
-    let mut updates: LinkedHashSet<State> = LinkedHashSet::new();
-    for production in productions {
-        if let Some(term) = earley_next_element(production) {
-            if let &Some(ref lhs) = &finished.lhs {
-                if lhs == term {
-                    let mut update = production.clone();
-                    if let Some(dot) = update.dot {
-                        update.dot = Some(dot + 1);
-                    }
-                    update.parse_parent = Some(production.clone()).into();
-                    updates.insert(update);
+            for state in state_sets {
+                if state.prod.dot == (state.prod.rhs.len()) {
+                    reduced.push(state.clone());
                 }
             }
-        }
-    }
-
-    updates
-}
-
-fn earley_init(grammar: &Grammar) -> Option<LinkedHashSet<State>> {
-    if let Some(prod) = grammar.productions_iter().nth(0) {
-        let mut productions: LinkedHashSet<State> = LinkedHashSet::new();
-        for expr in prod.rhs_iter() {
-            productions.insert(State {
-                origin: Some(0),
-                lhs: Some(prod.lhs.clone()),
-                terms: expr.terms_iter().cloned().collect::<Vec<_>>(),
-                dot: Some(0),
-                parse_parent: Box::new(None),
-            });
+            only_completed.push(reduced);
         }
 
-        return Some(productions);
-    }
-
-    return None;
-}
-
-fn earley_next_element(production: &State) -> Option<&Term> {
-    if let Some(dot) = production.dot {
-        return production.terms.iter().nth(dot);
-    }
-
-    None
-}
-
-fn hashset(data: &[State]) -> LinkedHashSet<State> {
-    LinkedHashSet::from_iter(data.iter().cloned())
-}
-
-fn final_state_candidates(grammar: &Grammar) -> Option<Vec<State>> {
-    let start_prod: &Production = grammar.productions_iter().next()?;
-
-    Some(start_prod.rhs_iter().map(|e|{
-        State {
-            origin: Some(0),
-            dot: Some(e.terms_iter().count()),
-            lhs: Some(start_prod.lhs.clone()),
-            terms: e.terms_iter().into_iter().map(|t| t.clone()).collect(),
-            parse_parent: Box::new(None),
+        // let forest:Vec<Tree> = vec![];
+        // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
+        println!("\n\n");
+        for accepted_state in &self.accepted_states {
+            self.construct(accepted_state, &only_completed);
         }
-    }).collect::<Vec<State>>())
+    }
 }
 
-impl EarleyParser {
-    pub fn new(grammar: Grammar) -> EarleyParser {
-        EarleyParser { grammar,  }
+
+impl EarleyChart {
+    pub fn eval(grammar: &str, input: &str) -> Result<EarleyOutcome, Error> {
+        let parser = EarleyParser::new(grammar, input)?;
+        let outcome = parser.earley_parse()?;
+
+        // if let EarleyOutcome::Accepted(accepted) = &outcome {
+        //     accepted.parse_forest();
+        // }
+
+        Ok(outcome.clone())
     }
 
-    pub fn grammar(&self) -> Grammar {
-        self.grammar.clone()
-    }
-
-    pub fn earley_parse(&mut self, input: String) -> Result<Vec<LinkedHashSet<State>>, Error> {
-        let grammar = self.grammar.clone();
-
-        let mut states: Vec<LinkedHashSet<State>> = vec![LinkedHashSet::new(); input.len() + 1];
-        let mut productions: Vec<State> = vec![];
-
-        let mut tokens: Vec<String> = vec![];
-
-        if let Some(intial) = earley_init(&grammar) {
-            states[0] = intial;
+    pub fn accept(grammar: &str, input: &str) -> Result<bool, Error> {
+        let parser = EarleyParser::new(grammar, input)?;
+        let res = parser.earley_parse()?;
+        if let EarleyOutcome::Accepted(_) = res {
+            Ok(true)
         } else {
-            println!("Something in init went wrong!");
-        }
-
-        for k in 0..input.len() + 1 {
-            if let Some(state) = states.iter_mut().nth(k) {
-                productions = state.iter().cloned().collect::<Vec<_>>();
-                state.clear();
-            }
-
-            while let Some(production) = productions.pop() {
-                if let Some(state) = states.iter_mut().nth(k) {
-                    if state.contains(&production) {
-                        continue;
-                    }
-
-                    state.insert(production.clone());
-                }
-
-                if let Some(term) = earley_next_element(&production) {
-                    match *term {
-                        Term::Nonterminal(_) => {
-                            let predicted = earley_predictor(&term, k, &grammar);
-                            productions =
-                                hashset(&productions).union(&predicted).cloned().collect();
-                        }
-                        Term::Terminal(ref t) => {
-                            if let Some(state) = states.iter_mut().nth(k + 1) {
-                                let scanned =
-                                    earley_scanner(&term, k, &input, &grammar, &production);
-
-                                if scanned.len() > 0 {
-                                    tokens.push(t.clone());
-                                }
-
-                                *state = scanned.union(&state).cloned().collect();
-                            }
-                        }
-                    }
-                } else {
-                    if let Some(origin) = production.origin {
-                        if let Some(state) = states.iter_mut().nth(origin) {
-                            let completed = earley_completer(&state, &production);
-                            productions =
-                                hashset(&productions).union(&completed).cloned().collect();
-                        }
-                    }
-                }
-            }
-        }
-        let final_states_actual = states.iter().last().unwrap();
-        if let Some(candidates) = final_state_candidates(&self.grammar) {
-            for candidate in candidates {
-                if final_states_actual.contains(&candidate) {
-                    return Ok(states)
-                }
-            }
-        }
-
-        Err(Error::InputRejected(format!("Input '{}' rejected by grammar. Expected: Final States: {}", input, final_states_actual.iter().map(|s| format!("\n{:?}", s)).collect::<String>())))
-    }
-}
-
-impl FromStr for EarleyParser {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Grammar::from_str(s) {
-            Result::Ok(g) => Ok(EarleyParser::new(g)),
-            Result::Err(e) => Err(Error::from(e)),
+            Ok(false)
         }
     }
 }
 
-impl fmt::Display for EarleyParser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.grammar().to_string())
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct State {
+    pub origin: usize,
+    pub prod: EarleyProd,
+}
+
+impl State {
+    pub fn new(prod: EarleyProd, origin: usize) -> State {
+        State { prod, origin }
     }
 }
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let terms: String = self.terms.iter().enumerate().map(|(i, t)| {
-            if Some(i) == self.dot {
-                format!("{:#}{} ", t, "•")
-            } else if i + 1 == self.terms.len() && self.dot == Some(self.terms.len()) {
-                format!("{:#}{} ", t, "•")
-            } else {
-                format!("{:#} ", t)
+        let terms: String = self
+            .prod
+            .rhs
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                if i == self.prod.dot {
+                    format!("{}{:#}", "•", t)
+                } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
+                    format!("{:#}{} ", t, "•")
+                } else {
+                    format!("{:#} ", t)
+                }
+            })
+            .collect();
+
+        write!(
+            f,
+            "[{}] {} := {} ({})",
+            self.origin, self.prod.lhs, terms, self.prod.dot
+        )
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct EarleyProd {
+    pub lhs: Term,
+    pub rhs: Vec<Term>,
+    pub dot: usize,
+}
+
+impl EarleyProd {
+    pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize) -> EarleyProd {
+        EarleyProd { lhs, rhs, dot }
+    }
+    pub fn get_next(&self) -> Option<&Term> {
+        self.rhs.get(self.dot)
+    }
+}
+
+pub struct EarleyParser {
+    input: String,
+    grammar: Grammar,
+    // completed_states: LinkedHashSet<State>,
+    // chart
+}
+
+impl EarleyParser {
+    pub fn new(grammar: &str, input: &str) -> Result<EarleyParser, Error> {
+        Ok(EarleyParser {
+            input: input.to_string(),
+            grammar: grammar.parse()?,
+            // start_states: LinkedHashSet::new(),
+        })
+    }
+
+    pub fn earley_parse(self) -> Result<EarleyOutcome, Error> {
+        let get_start_states = || match self.grammar.productions_iter().peekable().peek() {
+            Some(p) => {
+                let mut state_set: LinkedHashSet<State> = LinkedHashSet::new();
+                for expr in p.rhs_iter() {
+                    let terms = expr.terms_iter().cloned().collect::<Vec<Term>>();
+                    let prod = EarleyProd::new((p.lhs).clone(), terms, 0);
+                    let state = State::new(prod, 0);
+                    state_set.insert(state);
+                }
+
+                Ok(state_set)
             }
-        }).collect();
+            None => Err(Error::GrammarError(format!(
+                "No start state candidate found in grammar: {}",
+                self.grammar
+            ))),
+        };
 
-        write!(f, "[{}] {} := {}", self.origin.unwrap_or(0), self.lhs.as_ref().unwrap_or(&Term::Nonterminal("??".to_string())), terms)
+        let start_states = get_start_states()?;
+        let input_symbols = self.input.chars().collect::<Vec<char>>();
+
+        let mut chart: Vec<LinkedHashSet<State>> =
+            vec![LinkedHashSet::new(); input_symbols.len() + 1];
+        chart[0] = start_states.clone();
+
+        for k in 0..chart.len() {
+            let mut unchanged = LinkedHashSet::new();
+
+            while unchanged != chart[k] {
+                unchanged = chart[k].clone();
+
+                chart[k] = self.earley_predict(k, &chart[k]);
+                if k + 1 < chart.len() && k < input_symbols.len() {
+                    chart[k + 1] = self.earley_scan(input_symbols[k].to_string(), &chart[k]);
+                }
+                chart[k] = self.earley_complete(&chart[k], &chart);
+            }
+        }
+
+        if let Some(accepted_states) = self.get_accepted(&start_states, chart.last(), input_symbols.len(), chart.len()) {
+            // println!("accepted_states first len {}", accepted_states.len());
+            Ok(EarleyOutcome::Accepted(EarleyAccepted::new(chart, accepted_states, self.input)))
+        } else {
+            Ok(EarleyOutcome::Rejected)
+        }
     }
-}
 
-impl PartialEq for State {
-    fn eq(&self, other: &Self) -> bool {
-        self.dot == other.dot &&
-            self.terms == other.terms &&
-            self.origin == other.origin &&
-            self.lhs == other.lhs
+    fn get_accepted(&self, start_states: &LinkedHashSet<State>,
+                    final_chart_states: Option<&LinkedHashSet<State>>, input_len: usize, chart_len: usize) -> Option<Vec<State>> {
+
+        if input_len + 1 != chart_len {
+            return None
+        }
+
+        let mut completed: Vec<State> = vec![];
+        match final_chart_states {
+            Some(final_states) => {
+
+                for start_state in start_states {
+                    let find = final_states.iter().find(|final_state| {
+                        final_state.origin == 0
+                        && final_state.prod.dot == final_state.prod.rhs.len()
+                        && start_state.prod.lhs == final_state.prod.lhs
+                        && start_state.prod.rhs == final_state.prod.rhs
+                    });
+
+                    if let Some(found) = find {
+                        // println!("adding {} to accepted states", found);
+                        completed.push(found.clone());
+                    }
+                }
+                if completed.is_empty() {
+                    None
+                } else {
+                    Some(completed)
+                }
+            },
+            _ => None
+        }
     }
-}
 
-impl Eq for State {}
+    /// Prediction:
+    /// For every state in S(k) of the form (X → α • Y β, j)
+    /// (where j is the origin position as above),
+    /// add (Y → • γ, k) to S(k) for every production in the
+    /// grammar with Y on the left-hand side (Y → γ).
+    /// [https://en.wikipedia.org/wiki/Earley_parser]
+    ///
+    ///
+    /// For every `state: State` in `state_set` where
+    /// `state.prod.get_next() == Some(bnf::Term::Nonterm(nt))`,
+    /// find all productions `prod` in self.grammar where `prod.lhs == nt`
+    /// and add a new state to the returned `state_set` for all
+    /// bnf::Expression `expr` in `prod.rhs` where:
+    /// state.lhs = prod.lhs
+    /// state.rhs = expr collected into a Vec<Term>
+    /// origin = `k` (the index of this state set in the EarleyChart)
+    /// dot = 0
+    fn earley_predict(&self, k: usize, state_set: &LinkedHashSet<State>) -> LinkedHashSet<State> {
+        let find_productions_in_grammar = |term: &Term| {
+            let mut ret: Vec<&Production> = vec![];
+            for p in self.grammar.productions_iter() {
+                if (*p).lhs == *term {
+                    // ret.push(p.clone())
+                    ret.push(p)
+                }
+            }
 
-impl Hash for State {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.dot.hash(hasher);
-        self.terms.hash(hasher);
-        self.origin.hash(hasher);
-        self.lhs.hash(hasher);
+            ret
+        };
+
+        let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
+
+        for state in state_set.iter() {
+            if let Some(term) = state.prod.get_next() {
+                if let Term::Nonterminal(_) = term {
+                    // let prods = self.find_productions_in_grammar(term);
+                    find_productions_in_grammar(term).iter().for_each(|p| {
+                        let exprs = p.rhs_iter().cloned().collect::<Vec<Expression>>();
+                        exprs.iter().for_each(|e| {
+                            let rhs = e.terms_iter().cloned().collect::<Vec<Term>>();
+                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0);
+                            ret_state_set.insert(State::new(earley_prod, k));
+                        });
+                    });
+                }
+            }
+        }
+
+        ret_state_set
+    }
+
+    /// Scanning:
+    /// If a is the next symbol in the input stream,
+    /// for every state in S(k) of the form (X → α • a β, j),
+    /// add (X → α a • β, j) to S(k+1).
+    /// [https://en.wikipedia.org/wiki/Earley_parser]
+    ///
+    /// For every `curr_state: State` in `state_set` where `symbol` is the
+    /// char being evaluated from the input string,
+    /// `state.prod.get_next() == Some(bnf::Term::Terminal::from_str(symbol)`,
+    /// add `new_state: State` to the returned state set, where:
+    /// new_state = curr_state.clone()
+    /// new_state.prod.dot = curr_state.prod.dot + 1
+    fn earley_scan(
+        &self,
+        symbol: String,
+        state_set: &LinkedHashSet<State>,
+    ) -> LinkedHashSet<State> {
+        let mut ret_state_set: LinkedHashSet<State> = LinkedHashSet::new();
+
+        for state in state_set.iter() {
+            if let Some(term) = state.prod.get_next() {
+                if let Term::Terminal(s) = term {
+                    if *s == symbol {
+                        let mut incremented = state.clone();
+                        incremented.prod.dot = state.prod.dot + 1;
+                        ret_state_set.insert(incremented);
+                    }
+                }
+            }
+        }
+
+        ret_state_set
+    }
+
+    /// Completion:
+    /// For every state in S(k) of the form (Y → γ •, j),
+    /// find all states in S(j) of the form (X → α • Y β, i)
+    /// and add (X → α Y • β, i) to S(k).
+    /// [https://en.wikipedia.org/wiki/Earley_parser]
+    ///
+    /// For every `curr_state: State` in `state_set` where
+    /// curr_state.prod.get_next() == None, find all states in
+    /// the Vec<LinkedHashSet<State>> where
+    /// `chart_state[curr_state.origin].get_next() == Some(curr_state.prod.lhs)`
+    /// and add a state to the returned state set where:
+    /// new_state = chart_state.clone()
+    /// new_state.dot = chart_state.prod.dot + 1
+    fn earley_complete(
+        &self,
+        state_set: &LinkedHashSet<State>,
+        chart: &[LinkedHashSet<State>],
+    ) -> LinkedHashSet<State> {
+        let find_in_chart = |lhs: &Term, pos: usize| {
+            let mut ret_states: Vec<State> = vec![];
+            if let Some(states_at_pos) = chart.get(pos) {
+                for state in states_at_pos {
+                    if state.prod.get_next() == Some(lhs) {
+                        ret_states.push(state.clone());
+                    }
+                }
+            }
+            ret_states
+        };
+
+        let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
+
+        for state in state_set {
+            if state.prod.get_next().is_none() {
+                let next_states = find_in_chart(&state.prod.lhs, state.origin);
+                for n in next_states {
+                    let mut new_state = n.clone();
+                    new_state.prod.dot = n.prod.dot + 1;
+                    ret_state_set.insert(new_state);
+                }
+            }
+        }
+
+        ret_state_set
     }
 }
