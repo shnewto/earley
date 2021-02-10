@@ -456,7 +456,7 @@ impl EarleyParser {
                         let exprs = p.rhs_iter().cloned().collect::<Vec<Expression>>();
                         exprs.iter().for_each(|e| {
                             let rhs = e.terms_iter().cloned().collect::<Vec<Term>>();
-                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0, 0);
+                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0, chart_pos);
                             ret_state_set.insert(State::new(earley_prod, k));
                         });
                     });
