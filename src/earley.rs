@@ -4,11 +4,26 @@ use linked_hash_set::LinkedHashSet;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-// #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
-// pub struct Tree {
-//     root: Term,
-//     leaves: Vec<Term>
-// }
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Tree {
+    root: State,
+    leaves: Vec<Leaf>
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Leaf {
+    Nonterminal(usize, State),
+    Terminal(usize, String),
+}
+
+impl Leaf {
+    pub fn index(&self) -> usize {
+        match self {
+            Leaf::Nonterminal(index, _) => *index,
+            Leaf::Terminal(index, _) => *index,
+        }
+    }
+}
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyChart;
@@ -36,75 +51,158 @@ impl EarleyAccepted {
         }
     }
 
-    fn get_next_index(&self, term: &Term, index: usize, chart: &[Vec<State>]) -> Option<usize> {
-        match term {
-            Term::Nonterminal(_) => {
-                // println!("looking for {} at {}", term, index);
-                for state_set in chart.get(index) {
-                    for state in state_set {
-                        if state.prod.lhs == *term {
-                            println!("->  '{}' in '{}'", term, state);
-                            return Some(state.origin);
-                        } else {
-                            // println!("wasn't {}", term);
-                        }
+    fn get_at_index(&self, term: &Term, index: usize, chart: &[Vec<State>]) -> Option<Leaf> {
+        let check_nonterminal_index = | x: usize | {
+            for state_set in chart.get(x) {
+                for state in state_set {
+                    if state.prod.lhs == *term {
+                        let next_index = if state.origin == 0 { x } else { state.origin };
+                        // println!("->  '{}' in '{}'", term, state);
+                        return Some(Leaf::Nonterminal(next_index, state.clone()))
                     }
                 }
-            },
-            Term::Terminal(val) => {
-                let start: usize = if index == 0 { 0 } else { index - 1 };
-                let end: usize = index;
-                let chars: Vec<String> = self.input.chars().map(|c| c.to_string()).collect();
-                if let Some(c) = chars.get(start) {
-                    if c == val {
-                        println!("->  '{}'", term);
-                        return Some(start)
-                    }
-                } else if let Some(c) = chars.get(end )  {
-                    println!("->  '{}'", term);
-                    if c == val {
-                        return Some(end)
-                    }
+            }
+
+            None
+        };
+
+        let check_terminal_index = | x: usize , val: &str | {
+            let chars: Vec<String> = self.input.chars().map(|c| c.to_string()).collect();
+            if let Some(c) = chars.get(x) {
+                if c == val {
+                    // println!("->  '{}'", term);
+                    return Some(Leaf::Terminal(x, val.to_string()))
                 }
-            },
-        }
+            }
+
+            None
+        };
+
+
+        let x: usize = if index == 0 { 0 } else { index - 1 };
+
+            match term {
+                Term::Nonterminal(_) => {
+                    if let Some(leaf) = check_nonterminal_index(index) {
+                        return Some(leaf);
+                    }
+                    // if let Some(leaf) = check_nonterminal_index(x_plus_one) {
+                    //     return Some(leaf);
+                    // }
+                },
+                Term::Terminal(val) => {
+                    if let Some(leaf) = check_terminal_index(x, val) {
+                        return Some(leaf);
+                    }
+                },
+            }
 
         None
-
     }
 
-    fn construct(&self, state: &State, chart: &[Vec<State>]) {
+    fn construct(&self, state: &State, parent_rule_finish_index: usize, chart: &[Vec<State>], prefix: String) {
+
+
         let mut stack = state.prod.rhs.clone();
-        let mut pos = chart.len() - 1;
+        let mut curr_rule_finish_index = parent_rule_finish_index;
+        let mut root = Tree {
+            root: state.clone(),
+            leaves: vec![]
+        };
+
+        println!("{}{}", prefix, root);
         while let Some(t) = stack.pop() {
-            // println!("\n\nlooking for {} at {}", t, pos);
-            if let Some(i) = self.get_next_index(&t, pos, chart) {
-                pos = i;
+            // let get_index= if stack.is_empty() {
+            //     state.origin + 1
+            // } else {
+            //     curr_rule_finish_index
+            // };
+
+            let get_index = curr_rule_finish_index;
+
+            if let Some(root_kind) = self.get_at_index(&t, get_index, chart) {
+                match root_kind {
+                    Leaf::Nonterminal(finish_index, ref _s) => {
+                        curr_rule_finish_index = finish_index;
+                        root.leaves.push(root_kind.clone());
+                        // println!("\t nonterminal --> {} -->", _s.prod);
+                    },
+                    Leaf::Terminal(finish_index,  ref _s) => {
+                        curr_rule_finish_index = finish_index;
+                        root.leaves.push(root_kind.clone());
+                        // println!("\t terminal --> {}", _s);
+                    },
+                }
             } else {
                 // println!("couldn't find '{}'!", t);
+            }
+        }
+
+
+        let next_prefix = prefix + "\t";
+        for leaf in &root.leaves {
+            match leaf {
+                Leaf::Nonterminal(_, s) => {
+                    self.construct(s, curr_rule_finish_index, chart, next_prefix.clone());
+                },
+                Leaf::Terminal(_, v) =>  {
+                    println!("{}{}", next_prefix, v);
+                },
+
             }
         }
     }
 
     pub fn parse_forest(&self) {
+        let only_completed = self.get_completed_as_vecs();
+        // let forest:Vec<Tree> = vec![];
+        // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
+        let rule_finish_index = self.chart.len() - 1;
+        for accepted_state in &self.accepted_states {
+            self.construct(accepted_state, rule_finish_index, &only_completed, "".to_string());
+        }
+    }
+
+
+    pub fn get_completed(&self) -> Vec<LinkedHashSet<State>> {
         let mut only_completed = vec![];
+
         for state_sets in &self.chart {
-            let mut reduced = vec![];
+            let mut reduced = LinkedHashSet::new();
 
             for state in state_sets {
                 if state.prod.dot == (state.prod.rhs.len()) {
-                    reduced.push(state.clone());
+                    reduced.insert(state.clone());
                 }
             }
             only_completed.push(reduced);
         }
 
-        // let forest:Vec<Tree> = vec![];
-        // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
-        println!("\n\n");
-        for accepted_state in &self.accepted_states {
-            self.construct(accepted_state, &only_completed);
+        only_completed
+    }
+
+    pub fn get_completed_as_vecs(&self) -> Vec<Vec<State>> {
+        let mut only_completed = vec![];
+
+        for state_sets in &self.chart {
+            let mut reduced = LinkedHashSet::new();
+
+            for state in state_sets {
+                if state.prod.dot == (state.prod.rhs.len()) {
+                    reduced.insert(state.clone());
+                }
+            }
+            only_completed.push(reduced);
         }
+
+        EarleyAccepted::state_sets_to_vec(only_completed)
+    }
+
+    fn state_sets_to_vec(chart: Vec<LinkedHashSet<State>>) -> Vec<Vec<State>> {
+        chart.iter().map(|state_set| {
+            state_set.iter().cloned().collect::<Vec<State>>()
+        }
+        ).collect()
     }
 }
 
@@ -144,6 +242,40 @@ impl State {
     }
 }
 
+impl fmt::Display for Leaf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let value = match self {
+            Leaf::Nonterminal(_, s) => s.prod.to_string(),
+            Leaf::Terminal(_, s) => s.to_string(),
+        };
+        write!(f, "{}", value)
+    }
+}
+
+
+impl fmt::Display for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}\n{}",
+            self.root.prod,
+            self.leaves.iter().fold(String::new(), |i, t| format!("\t{}] {}\n", i, t))
+        )
+    }
+}
+
+impl fmt::Display for EarleyProd {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} := {}",
+            self.lhs,
+            // self.rhs.iter().fold(String::new(), |acc, t| format!("{}] {} {}", self.idx, acc, t))
+            self.rhs.iter().fold(String::new(), |acc, t| format!("{} {}", acc, t))
+        )
+    }
+}
+
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let terms: String = self
@@ -164,11 +296,19 @@ impl fmt::Display for State {
 
         write!(
             f,
-            "[{}] {} := {} ({})",
-            self.origin, self.prod.lhs, terms, self.prod.dot
+            "[{}] {} := {}",
+            self.origin, self.prod.lhs, terms
         )
     }
 }
+
+// #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+// pub struct EarleyProd {
+//     pub lhs: Term,
+//     pub rhs: Vec<Term>,
+//     pub dot: usize,
+//     pub idx: usize,
+// }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyProd {
@@ -176,6 +316,7 @@ pub struct EarleyProd {
     pub rhs: Vec<Term>,
     pub dot: usize,
 }
+
 
 impl EarleyProd {
     pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize) -> EarleyProd {
@@ -316,7 +457,7 @@ impl EarleyParser {
 
         let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
 
-        for state in state_set.iter() {
+        for (_chart_pos, state) in state_set.iter().enumerate() {
             if let Some(term) = state.prod.get_next() {
                 if let Term::Nonterminal(_) = term {
                     // let prods = self.find_productions_in_grammar(term);
@@ -387,10 +528,10 @@ impl EarleyParser {
         state_set: &LinkedHashSet<State>,
         chart: &[LinkedHashSet<State>],
     ) -> LinkedHashSet<State> {
-        let find_in_chart = |lhs: &Term, pos: usize| {
+        let find_in_chart = |lhs: &Term, index: usize| {
             let mut ret_states: Vec<State> = vec![];
-            if let Some(states_at_pos) = chart.get(pos) {
-                for state in states_at_pos {
+            if let Some(states_at_index) = chart.get(index) {
+                for state in states_at_index {
                     if state.prod.get_next() == Some(lhs) {
                         ret_states.push(state.clone());
                     }

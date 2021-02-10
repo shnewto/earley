@@ -10,7 +10,7 @@ fn _print_chart(grammar: Grammar, outcome: EarleyOutcome) {
     println!("{}", grammar);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        for (i, states) in accepted.chart.iter().enumerate() {
+        for (i, states) in accepted.get_completed_as_vecs().iter().enumerate() {
             println!("\n=== {} ===", i);
             for state in states.iter() {
                 println!("{}", state);
