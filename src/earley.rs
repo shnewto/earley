@@ -448,7 +448,7 @@ impl EarleyParser {
 
         let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
 
-        for (_chart_pos, state) in state_set.iter().enumerate() {
+        for (_, state) in state_set.iter().enumerate() {
             if let Some(term) = state.prod.get_next() {
                 if let Term::Nonterminal(_) = term {
                     // let prods = self.find_productions_in_grammar(term);
