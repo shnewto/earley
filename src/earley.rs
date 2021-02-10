@@ -4,6 +4,12 @@ use linked_hash_set::LinkedHashSet;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+// #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+// pub struct Tree {
+//     root: Term,
+//     leaves: Vec<Term>
+// }
+
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyChart;
 
@@ -30,10 +36,74 @@ impl EarleyAccepted {
         }
     }
 
+    fn get_next_index(&self, term: &Term, index: usize, chart: &[Vec<State>]) -> Option<usize> {
+        match term {
+            Term::Nonterminal(_) => {
+                // println!("looking for {} at {}", term, index);
+                for state_set in chart.get(index) {
+                    for state in state_set {
+                        if state.prod.lhs == *term {
+                            println!("->  '{}' in '{}'", term, state);
+                            return Some(state.origin);
+                        } else {
+                            // println!("wasn't {}", term);
+                        }
+                    }
+                }
+            },
+            Term::Terminal(val) => {
+                let start: usize = if index == 0 { 0 } else { index - 1 };
+                let end: usize = index;
+                let chars: Vec<String> = self.input.chars().map(|c| c.to_string()).collect();
+                if let Some(c) = chars.get(start) {
+                    if c == val {
+                        println!("->  '{}'", term);
+                        return Some(start)
+                    }
+                } else if let Some(c) = chars.get(end )  {
+                    println!("->  '{}'", term);
+                    if c == val {
+                        return Some(end)
+                    }
+                }
+            },
+        }
+
+        None
+
+    }
+
+    fn construct(&self, state: &State, chart: &[Vec<State>]) {
+        let mut stack = state.prod.rhs.clone();
+        let mut pos = chart.len() - 1;
+        while let Some(t) = stack.pop() {
+            // println!("\n\nlooking for {} at {}", t, pos);
+            if let Some(i) = self.get_next_index(&t, pos, chart) {
+                pos = i;
+            } else {
+                // println!("couldn't find '{}'!", t);
+            }
+        }
+    }
+
     pub fn parse_forest(&self) {
-        // println!("accepted states len in parse_forest {}", self.accepted_states.len());
+        let mut only_completed = vec![];
+        for state_sets in &self.chart {
+            let mut reduced = vec![];
+
+            for state in state_sets {
+                if state.prod.dot == (state.prod.rhs.len()) {
+                    reduced.push(state.clone());
+                }
+            }
+            only_completed.push(reduced);
+        }
+
+        // let forest:Vec<Tree> = vec![];
+        // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
+        println!("\n\n");
         for accepted_state in &self.accepted_states {
-            println!("accepted state {}", accepted_state);
+            self.construct(accepted_state, &only_completed);
         }
     }
 }
