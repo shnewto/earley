@@ -101,60 +101,61 @@ impl EarleyAccepted {
     }
 
     fn construct(&self, state: &State, parent_rule_finish_index: usize, chart: &[Vec<State>], prefix: String) {
-
-
-        let mut stack = state.prod.rhs.clone();
-        let mut curr_rule_finish_index = parent_rule_finish_index;
-        let mut root = Tree {
-            root: state.clone(),
-            leaves: vec![]
-        };
-
-        println!("{}{}", prefix, root);
-        while let Some(t) = stack.pop() {
-            // let get_index= if stack.is_empty() {
-            //     state.origin + 1
-            // } else {
-            //     curr_rule_finish_index
-            // };
-
-            let get_index = curr_rule_finish_index;
-
-            if let Some(root_kind) = self.get_at_index(&t, get_index, chart) {
-                match root_kind {
-                    Leaf::Nonterminal(finish_index, ref _s) => {
-                        curr_rule_finish_index = finish_index;
-                        root.leaves.push(root_kind.clone());
-                        // println!("\t nonterminal --> {} -->", _s.prod);
-                    },
-                    Leaf::Terminal(finish_index,  ref _s) => {
-                        curr_rule_finish_index = finish_index;
-                        root.leaves.push(root_kind.clone());
-                        // println!("\t terminal --> {}", _s);
-                    },
-                }
-            } else {
-                // println!("couldn't find '{}'!", t);
-            }
-        }
-
-
-        let next_prefix = prefix + "\t";
-        for leaf in &root.leaves {
-            match leaf {
-                Leaf::Nonterminal(_, s) => {
-                    self.construct(s, curr_rule_finish_index, chart, next_prefix.clone());
-                },
-                Leaf::Terminal(_, v) =>  {
-                    println!("{}{}", next_prefix, v);
-                },
-
-            }
-        }
+        //
+        //
+        // let mut stack = state.prod.rhs.clone();
+        // let mut curr_rule_finish_index = parent_rule_finish_index;
+        // let mut root = Tree {
+        //     root: state.clone(),
+        //     leaves: vec![]
+        // };
+        //
+        // println!("{}{}", prefix, root);
+        // while let Some(t) = stack.pop() {
+        //     // let get_index= if stack.is_empty() {
+        //     //     state.origin + 1
+        //     // } else {
+        //     //     curr_rule_finish_index
+        //     // };
+        //
+        //     let get_index = curr_rule_finish_index;
+        //
+        //     if let Some(root_kind) = self.get_at_index(&t, get_index, chart) {
+        //         match root_kind {
+        //             Leaf::Nonterminal(finish_index, ref _s) => {
+        //                 curr_rule_finish_index = finish_index;
+        //                 root.leaves.push(root_kind.clone());
+        //                 // println!("\t nonterminal --> {} -->", _s.prod);
+        //             },
+        //             Leaf::Terminal(finish_index,  ref _s) => {
+        //                 curr_rule_finish_index = finish_index;
+        //                 root.leaves.push(root_kind.clone());
+        //                 // println!("\t terminal --> {}", _s);
+        //             },
+        //         }
+        //     } else {
+        //         // println!("couldn't find '{}'!", t);
+        //     }
+        // }
+        //
+        //
+        // let next_prefix = prefix + "\t";
+        // for leaf in &root.leaves {
+        //     match leaf {
+        //         Leaf::Nonterminal(_, s) => {
+        //             self.construct(s, curr_rule_finish_index, chart, next_prefix.clone());
+        //         },
+        //         Leaf::Terminal(_, v) =>  {
+        //             println!("{}{}", next_prefix, v);
+        //         },
+        //
+        //     }
+        // }
     }
 
     pub fn parse_forest(&self) {
         let only_completed = self.get_completed_as_vecs();
+        let flipped: Vec<LinkedHashSet<FlippedState>> = self.flip();
         // let forest:Vec<Tree> = vec![];
         // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
         let rule_finish_index = self.chart.len() - 1;
@@ -163,6 +164,18 @@ impl EarleyAccepted {
         }
     }
 
+    pub fn flip(&self) -> Vec<LinkedHashSet<FlippedState>> {
+        let mut flipped = vec![LinkedHashSet::new(); self.chart.len()];
+
+        for (i, state_set) in self.get_completed().iter().enumerate() {
+            for state in state_set {
+                let flipped_state = FlippedState::new(state.prod.clone(), i);
+                flipped[state.origin].insert(flipped_state);
+            }
+        }
+
+        flipped
+    }
 
     pub fn get_completed(&self) -> Vec<LinkedHashSet<State>> {
         let mut only_completed = vec![];
@@ -236,6 +249,16 @@ pub struct State {
     pub prod: EarleyProd,
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct FlippedState {
+    pub end: usize,
+    pub prod: EarleyProd,
+}
+
+impl FlippedState {
+    pub fn new(prod: EarleyProd, end: usize) -> FlippedState { FlippedState { prod, end }}
+}
+
 impl State {
     pub fn new(prod: EarleyProd, origin: usize) -> State {
         State { prod, origin }
@@ -306,12 +329,11 @@ pub struct EarleyProd {
     pub lhs: Term,
     pub rhs: Vec<Term>,
     pub dot: usize,
-    pub idx1234: usize, // weird name, just in case there's some shadowing causing the hang
 }
 
 impl EarleyProd {
-    pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize, idx1234: usize) -> EarleyProd {
-        EarleyProd { lhs, rhs, dot, idx1234 }
+    pub fn new(lhs: Term, rhs: Vec<Term>, dot: usize) -> EarleyProd {
+        EarleyProd { lhs, rhs, dot }
     }
     pub fn get_next(&self) -> Option<&Term> {
         self.rhs.get(self.dot)
@@ -340,7 +362,7 @@ impl EarleyParser {
                 let mut state_set: LinkedHashSet<State> = LinkedHashSet::new();
                 for expr in p.rhs_iter() {
                     let terms = expr.terms_iter().cloned().collect::<Vec<Term>>();
-                    let prod = EarleyProd::new((p.lhs).clone(), terms, 0, 0);
+                    let prod = EarleyProd::new((p.lhs).clone(), terms, 0);
                     let state = State::new(prod, 0);
                     state_set.insert(state);
                 }
@@ -448,7 +470,7 @@ impl EarleyParser {
 
         let mut ret_state_set: LinkedHashSet<State> = state_set.clone();
 
-        for (_, state) in state_set.iter().enumerate() {
+        for state in state_set.iter() {
             if let Some(term) = state.prod.get_next() {
                 if let Term::Nonterminal(_) = term {
                     // let prods = self.find_productions_in_grammar(term);
@@ -456,7 +478,7 @@ impl EarleyParser {
                         let exprs = p.rhs_iter().cloned().collect::<Vec<Expression>>();
                         exprs.iter().for_each(|e| {
                             let rhs = e.terms_iter().cloned().collect::<Vec<Term>>();
-                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0, 0);
+                            let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0);
                             ret_state_set.insert(State::new(earley_prod, k));
                         });
                     });

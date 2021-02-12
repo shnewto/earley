@@ -3,8 +3,9 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Term;
-use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome};
+use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome, FlippedState};
 use linked_hash_set::LinkedHashSet;
+use serde_json::ser::CharEscape::LineFeed;
 
 #[test]
 fn loup_vaillant_example() {
@@ -21,20 +22,116 @@ fn loup_vaillant_example() {
         ";
 
     let sentence = "1+(2*3-4)";
-    let expected= loup_vaillant_example_states()
-        .iter()
-        .map(|state_set| state_set.iter().cloned().collect())
-        .collect::<Vec<LinkedHashSet<State>>>();
 
-    let mut actual : Vec<LinkedHashSet<State>> = vec![];
+    let mut actual: Vec<LinkedHashSet<State>> = vec![];
+    let mut flipped_actual : Vec<LinkedHashSet<FlippedState>> = vec![];
+
+
     if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
-        actual = res.chart;
+        actual = res.chart.clone();
+        flipped_actual = res.flip();
+
     }
 
+    let expected= loup_vaillant_example_states();
     assert_eq!(expected, actual);
+
+
+    let flipped_expected = loup_vaillant_example_flipped(actual.len());
+
+    assert_eq!(flipped_expected.len(), flipped_actual.len());
+
+    for (i, a) in flipped_actual.iter().enumerate() {
+        assert_eq!((&flipped_expected[i], i), (a, i));
+    }
+
+    // assert_eq!(flipped_expected, flipped_actual);
 }
 
-fn loup_vaillant_example_states() -> Vec<Vec<State>> {
+fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedState>> {
+    let mut flipped: Vec<LinkedHashSet<FlippedState>> = vec![LinkedHashSet::new(); chart_len];
+
+    let mut x: EarleyProd;
+    let mut state_set: LinkedHashSet<FlippedState>;
+    let mut origin: usize;
+
+    state_set = LinkedHashSet::new();
+    origin = 0;
+    x = sum_to_sum_plus_prod(origin, 3).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 9));
+
+    x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 1));
+
+    x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 1));
+
+    x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 1));
+
+    x = number_to_1(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 1));
+    flipped[origin] = state_set.clone();
+
+
+    state_set = LinkedHashSet::new();
+    origin = 2;
+    x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 9));
+
+    x = factor_to_lp_sum_rp(origin, 3).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 9));
+    flipped[origin] = state_set.clone();
+
+    state_set = LinkedHashSet::new();
+    origin = 3;
+    x = sum_to_sum_sub_prod(origin, 3).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 8));
+
+    x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 6));
+
+    x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 4));
+
+    x = prod_to_prod_mul_factor(origin, 3).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 6));
+
+    x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 4));
+
+    x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 4));
+
+    x = number_to_2(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 4));
+    flipped[origin] = state_set.clone();
+
+    state_set = LinkedHashSet::new();
+    origin = 5;
+    x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 6));
+
+    x = number_to_3(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 6));
+    flipped[origin] = state_set.clone();
+
+    state_set = LinkedHashSet::new();
+    origin = 7;
+    x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 8));
+
+    x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 8));
+
+    x = number_to_4(origin, 1).get(0).unwrap().clone().prod;
+    state_set.insert(FlippedState::new(x, 8));
+    flipped[origin] = state_set.clone();
+
+    flipped
+}
+
+fn loup_vaillant_example_states() -> Vec<LinkedHashSet<State>> {
     let state_00 = loup_vaillant_example_state_00();
     let mut state_00_hs: Vec<State> = vec![];
 
@@ -117,6 +214,9 @@ fn loup_vaillant_example_states() -> Vec<Vec<State>> {
         state_08_hs,
         state_09_hs,
     ]
+    .iter()
+    .map(|state_set| state_set.iter().cloned().collect())
+    .collect::<Vec<LinkedHashSet<State>>>()
 }
 
 fn sum_to_sum_plus_prod(origin: usize, dot: usize) -> Vec<State> {
