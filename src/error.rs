@@ -6,6 +6,7 @@ use std::str;
 pub enum Error {
     BnfError(String),
     GrammarError(String),
+    ParseForestError(String),
     // InputRejected(String),
 }
 
@@ -14,6 +15,7 @@ impl fmt::Display for Error {
         match *self {
             Error::BnfError(ref s) => write!(f, "{}", s),
             Error::GrammarError(ref s) => write!(f, "{}", s),
+            Error::ParseForestError(ref s) => write!(f, "{}", s),
             // Error::InputRejected(ref s) => write!(f, "{}", s),
         }
     }

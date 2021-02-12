@@ -3,16 +3,17 @@ use bnf::{Expression, Grammar, Production, Term};
 use linked_hash_set::LinkedHashSet;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::os::macos::raw::stat;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Tree {
-    root: State,
+    root: FlippedState,
     leaves: Vec<Leaf>
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Leaf {
-    Nonterminal(usize, State),
+    Nonterminal(usize, FlippedState),
     Terminal(usize, String),
 }
 
@@ -100,17 +101,20 @@ impl EarleyAccepted {
         None
     }
 
-    fn construct(&self, state: &State, parent_rule_finish_index: usize, chart: &[Vec<State>], prefix: String) {
-        //
-        //
-        // let mut stack = state.prod.rhs.clone();
-        // let mut curr_rule_finish_index = parent_rule_finish_index;
-        // let mut root = Tree {
-        //     root: state.clone(),
-        //     leaves: vec![]
-        // };
-        //
-        // println!("{}{}", prefix, root);
+    fn construct(&self, state: &FlippedState, chart: &[LinkedHashSet<FlippedState>], prefix: String) {
+
+        let mut stack = state.prod.rhs.clone();
+        let mut root = Tree {
+            root: state.clone(),
+            leaves: vec![]
+        };
+
+
+        println!("{}{}", prefix, root);
+        while let Some(t) = stack.pop() {
+            let mut leaf: Vec<Leaf> = vec![];
+        }
+
         // while let Some(t) = stack.pop() {
         //     // let get_index= if stack.is_empty() {
         //     //     state.origin + 1
@@ -153,18 +157,29 @@ impl EarleyAccepted {
         // }
     }
 
-    pub fn parse_forest(&self) {
-        let only_completed = self.get_completed_as_vecs();
-        let flipped: Vec<LinkedHashSet<FlippedState>> = self.flip();
-        // let forest:Vec<Tree> = vec![];
-        // println!("orig len: {} \nnew len: {}", self.chart.len(), only_completed.len());
-        let rule_finish_index = self.chart.len() - 1;
-        for accepted_state in &self.accepted_states {
-            self.construct(accepted_state, rule_finish_index, &only_completed, "".to_string());
+    pub fn parse_forest(&self) -> Result<(), Error> {
+        let flipped_chart  = self.flip_completed();
+        let mut flipped_start_states: Vec<FlippedState> = vec![];
+        if let Some(inital) = flipped_chart.get(0) {
+            flipped_start_states = inital.iter().filter(|s|{
+                s.end == flipped_chart.len() - 1
+            }).cloned().collect();
+        } else {
+            return Err(Error::ParseForestError("Couldn't a start state candidate!".to_string()));
         }
+
+        for state in flipped_start_states {
+            self.construct(
+                &state,
+                &flipped_chart,
+                "".to_string()
+            );
+        }
+
+        Ok(())
     }
 
-    pub fn flip(&self) -> Vec<LinkedHashSet<FlippedState>> {
+    pub fn flip_completed(&self) -> Vec<LinkedHashSet<FlippedState>> {
         let mut flipped = vec![LinkedHashSet::new(); self.chart.len()];
 
         for (i, state_set) in self.get_completed().iter().enumerate() {
@@ -324,6 +339,32 @@ impl fmt::Display for State {
     }
 }
 
+impl fmt::Display for FlippedState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let terms: String = self
+            .prod
+            .rhs
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                if i == self.prod.dot {
+                    format!("{}{:#}", "•", t)
+                } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
+                    format!("{:#}{} ", t, "•")
+                } else {
+                    format!("{:#} ", t)
+                }
+            })
+            .collect();
+
+        write!(
+            f,
+            "{} := {} ({})",
+            self.prod.lhs, terms, self.end
+        )
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyProd {
     pub lhs: Term,
@@ -352,12 +393,11 @@ impl EarleyParser {
         Ok(EarleyParser {
             input: input.to_string(),
             grammar: grammar.parse()?,
-            // start_states: LinkedHashSet::new(),
         })
     }
 
-    pub fn earley_parse(self) -> Result<EarleyOutcome, Error> {
-        let get_start_states = || match self.grammar.productions_iter().peekable().peek() {
+    fn get_start_states(&self) -> Result<LinkedHashSet<State>, Error> {
+        match self.grammar.productions_iter().peekable().peek() {
             Some(p) => {
                 let mut state_set: LinkedHashSet<State> = LinkedHashSet::new();
                 for expr in p.rhs_iter() {
@@ -366,16 +406,17 @@ impl EarleyParser {
                     let state = State::new(prod, 0);
                     state_set.insert(state);
                 }
-
                 Ok(state_set)
             }
             None => Err(Error::GrammarError(format!(
                 "No start state candidate found in grammar: {}",
                 self.grammar
             ))),
-        };
+        }
+    }
 
-        let start_states = get_start_states()?;
+    pub fn earley_parse(self) -> Result<EarleyOutcome, Error> {
+        let start_states = self.get_start_states()?;
         let input_symbols = self.input.chars().collect::<Vec<char>>();
 
         let mut chart: Vec<LinkedHashSet<State>> =

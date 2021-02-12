@@ -29,7 +29,7 @@ fn loup_vaillant_example() {
 
     if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
         actual = res.chart.clone();
-        flipped_actual = res.flip();
+        flipped_actual = res.flip_completed();
 
     }
 
