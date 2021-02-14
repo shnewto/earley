@@ -3,9 +3,11 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Term;
-use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome, FlippedState};
+use earley::chart::EarleyChart;
+use earley::outcome::EarleyOutcome;
+use earley::prod::EarleyProd;
+use earley::state::{FlippedIntermediateState, IntermediateState};
 use linked_hash_set::LinkedHashSet;
-use serde_json::ser::CharEscape::LineFeed;
 
 #[test]
 fn loup_vaillant_example() {
@@ -23,19 +25,16 @@ fn loup_vaillant_example() {
 
     let sentence = "1+(2*3-4)";
 
-    let mut actual: Vec<LinkedHashSet<State>> = vec![];
-    let mut flipped_actual : Vec<LinkedHashSet<FlippedState>> = vec![];
-
+    let mut actual: Vec<LinkedHashSet<IntermediateState>> = vec![];
+    let mut flipped_actual: Vec<LinkedHashSet<FlippedIntermediateState>> = vec![];
 
     if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
         actual = res.chart.clone();
         flipped_actual = res.flip_completed();
-
     }
 
-    let expected= loup_vaillant_example_states();
+    let expected = loup_vaillant_example_states();
     assert_eq!(expected, actual);
-
 
     let flipped_expected = loup_vaillant_example_flipped(actual.len());
 
@@ -48,155 +47,159 @@ fn loup_vaillant_example() {
     // assert_eq!(flipped_expected, flipped_actual);
 }
 
-fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedState>> {
-    let mut flipped: Vec<LinkedHashSet<FlippedState>> = vec![LinkedHashSet::new(); chart_len];
+fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedIntermediateState>> {
+    let mut flipped: Vec<LinkedHashSet<FlippedIntermediateState>> =
+        vec![LinkedHashSet::new(); chart_len];
 
     let mut x: EarleyProd;
-    let mut state_set: LinkedHashSet<FlippedState>;
+    let mut state_set: LinkedHashSet<FlippedIntermediateState>;
     let mut origin: usize;
 
     state_set = LinkedHashSet::new();
     origin = 0;
     x = sum_to_sum_plus_prod(origin, 3).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 9));
+    state_set.insert(FlippedIntermediateState::new(x, 9));
 
     x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 1));
+    state_set.insert(FlippedIntermediateState::new(x, 1));
 
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 1));
+    state_set.insert(FlippedIntermediateState::new(x, 1));
 
     x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 1));
+    state_set.insert(FlippedIntermediateState::new(x, 1));
 
     x = number_to_1(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 1));
+    state_set.insert(FlippedIntermediateState::new(x, 1));
     flipped[origin] = state_set.clone();
-
 
     state_set = LinkedHashSet::new();
     origin = 2;
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 9));
+    state_set.insert(FlippedIntermediateState::new(x, 9));
 
     x = factor_to_lp_sum_rp(origin, 3).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 9));
+    state_set.insert(FlippedIntermediateState::new(x, 9));
     flipped[origin] = state_set.clone();
 
     state_set = LinkedHashSet::new();
     origin = 3;
     x = sum_to_sum_sub_prod(origin, 3).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 8));
+    state_set.insert(FlippedIntermediateState::new(x, 8));
 
     x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 6));
+    state_set.insert(FlippedIntermediateState::new(x, 6));
 
     x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 4));
+    state_set.insert(FlippedIntermediateState::new(x, 4));
 
-    x = prod_to_prod_mul_factor(origin, 3).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 6));
+    x = prod_to_prod_mul_factor(origin, 3)
+        .get(0)
+        .unwrap()
+        .clone()
+        .prod;
+    state_set.insert(FlippedIntermediateState::new(x, 6));
 
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 4));
+    state_set.insert(FlippedIntermediateState::new(x, 4));
 
     x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 4));
+    state_set.insert(FlippedIntermediateState::new(x, 4));
 
     x = number_to_2(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 4));
+    state_set.insert(FlippedIntermediateState::new(x, 4));
     flipped[origin] = state_set.clone();
 
     state_set = LinkedHashSet::new();
     origin = 5;
     x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 6));
+    state_set.insert(FlippedIntermediateState::new(x, 6));
 
     x = number_to_3(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 6));
+    state_set.insert(FlippedIntermediateState::new(x, 6));
     flipped[origin] = state_set.clone();
 
     state_set = LinkedHashSet::new();
     origin = 7;
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 8));
+    state_set.insert(FlippedIntermediateState::new(x, 8));
 
     x = factor_to_number(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 8));
+    state_set.insert(FlippedIntermediateState::new(x, 8));
 
     x = number_to_4(origin, 1).get(0).unwrap().clone().prod;
-    state_set.insert(FlippedState::new(x, 8));
+    state_set.insert(FlippedIntermediateState::new(x, 8));
     flipped[origin] = state_set.clone();
 
     flipped
 }
 
-fn loup_vaillant_example_states() -> Vec<LinkedHashSet<State>> {
+fn loup_vaillant_example_states() -> Vec<LinkedHashSet<IntermediateState>> {
     let state_00 = loup_vaillant_example_state_00();
-    let mut state_00_hs: Vec<State> = vec![];
+    let mut state_00_hs: Vec<IntermediateState> = vec![];
 
     for s in state_00 {
         state_00_hs.push(s);
     }
 
     let state_01 = loup_vaillant_example_state_01();
-    let mut state_01_hs: Vec<State> = vec![];
+    let mut state_01_hs: Vec<IntermediateState> = vec![];
 
     for s in state_01 {
         state_01_hs.push(s);
     }
 
     let state_02 = loup_vaillant_example_state_02();
-    let mut state_02_hs: Vec<State> = vec![];
+    let mut state_02_hs: Vec<IntermediateState> = vec![];
 
     for s in state_02 {
         state_02_hs.push(s);
     }
 
     let state_03 = loup_vaillant_example_state_03();
-    let mut state_03_hs: Vec<State> = vec![];
+    let mut state_03_hs: Vec<IntermediateState> = vec![];
 
     for s in state_03 {
         state_03_hs.push(s);
     }
 
     let state_04 = loup_vaillant_example_state_04();
-    let mut state_04_hs: Vec<State> = vec![];
+    let mut state_04_hs: Vec<IntermediateState> = vec![];
 
     for s in state_04 {
         state_04_hs.push(s);
     }
 
     let state_05 = loup_vaillant_example_state_05();
-    let mut state_05_hs: Vec<State> = vec![];
+    let mut state_05_hs: Vec<IntermediateState> = vec![];
 
     for s in state_05 {
         state_05_hs.push(s);
     }
 
     let state_06 = loup_vaillant_example_state_06();
-    let mut state_06_hs: Vec<State> = vec![];
+    let mut state_06_hs: Vec<IntermediateState> = vec![];
 
     for s in state_06 {
         state_06_hs.push(s);
     }
 
     let state_07 = loup_vaillant_example_state_07();
-    let mut state_07_hs: Vec<State> = vec![];
+    let mut state_07_hs: Vec<IntermediateState> = vec![];
 
     for s in state_07 {
         state_07_hs.push(s);
     }
 
     let state_08 = loup_vaillant_example_state_08();
-    let mut state_08_hs: Vec<State> = vec![];
+    let mut state_08_hs: Vec<IntermediateState> = vec![];
 
     for s in state_08 {
         state_08_hs.push(s);
     }
 
     let state_09 = loup_vaillant_example_state_09();
-    let mut state_09_hs: Vec<State> = vec![];
+    let mut state_09_hs: Vec<IntermediateState> = vec![];
 
     for s in state_09 {
         state_09_hs.push(s);
@@ -216,11 +219,11 @@ fn loup_vaillant_example_states() -> Vec<LinkedHashSet<State>> {
     ]
     .iter()
     .map(|state_set| state_set.iter().cloned().collect())
-    .collect::<Vec<LinkedHashSet<State>>>()
+    .collect::<Vec<LinkedHashSet<IntermediateState>>>()
 }
 
-fn sum_to_sum_plus_prod(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn sum_to_sum_plus_prod(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Sum".to_string()),
@@ -234,8 +237,8 @@ fn sum_to_sum_plus_prod(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Sum".to_string()),
@@ -249,8 +252,8 @@ fn sum_to_sum_sub_prod(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut sum_to_sum_sub_prod(origin, dot));
     states.append(&mut sum_to_sum_plus_prod(origin, dot));
@@ -258,8 +261,8 @@ fn sum_to_sum_plus_sub_prod(origin: usize, dot: usize) -> Vec<State> {
     states
 }
 
-fn sum_to_prod(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn sum_to_prod(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Sum".to_string()),
@@ -269,8 +272,8 @@ fn sum_to_prod(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn prod_to_prod_mul_factor(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn prod_to_prod_mul_factor(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Product".to_string()),
@@ -284,8 +287,8 @@ fn prod_to_prod_mul_factor(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Product".to_string()),
@@ -299,8 +302,8 @@ fn prod_to_prod_div_factor(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut prod_to_prod_div_factor(origin, dot));
     states.append(&mut prod_to_prod_mul_factor(origin, dot));
@@ -308,8 +311,8 @@ fn prod_to_prod_mul_div_factor(origin: usize, dot: usize) -> Vec<State> {
     states
 }
 
-fn prod_to_factor(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn prod_to_factor(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Product".to_string()),
@@ -319,8 +322,8 @@ fn prod_to_factor(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn factor_to_lp_sum_rp(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn factor_to_lp_sum_rp(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Factor".to_string()),
@@ -334,8 +337,8 @@ fn factor_to_lp_sum_rp(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_0(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_0(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -345,8 +348,8 @@ fn number_to_0(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_1(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_1(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -356,8 +359,8 @@ fn number_to_1(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_2(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_2(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -367,8 +370,8 @@ fn number_to_2(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_3(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_3(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -378,8 +381,8 @@ fn number_to_3(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_4(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_4(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -389,8 +392,8 @@ fn number_to_4(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_5(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_5(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -400,8 +403,8 @@ fn number_to_5(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_6(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_6(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -411,8 +414,8 @@ fn number_to_6(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_7(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_7(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -422,8 +425,8 @@ fn number_to_7(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_8(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_8(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -433,8 +436,8 @@ fn number_to_8(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_9(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_9(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -444,8 +447,8 @@ fn number_to_9(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_0_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_0_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -458,8 +461,8 @@ fn number_to_0_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_1_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_1_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -472,8 +475,8 @@ fn number_to_1_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_2_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_2_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -486,8 +489,8 @@ fn number_to_2_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_3_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_3_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -500,8 +503,8 @@ fn number_to_3_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_4_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_4_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -514,8 +517,8 @@ fn number_to_4_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_5_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_5_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -528,8 +531,8 @@ fn number_to_5_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_6_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_6_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -542,8 +545,8 @@ fn number_to_6_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_7_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_7_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -556,8 +559,8 @@ fn number_to_7_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_8_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_8_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -570,8 +573,8 @@ fn number_to_8_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_9_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn number_to_9_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Number".to_string()),
@@ -584,8 +587,8 @@ fn number_to_9_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn factor_to_number(origin: usize, dot: usize) -> Vec<State> {
-    vec![State {
+fn factor_to_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    vec![IntermediateState {
         origin,
         prod: EarleyProd {
             lhs: Term::Nonterminal("Factor".to_string()),
@@ -595,8 +598,8 @@ fn factor_to_number(origin: usize, dot: usize) -> Vec<State> {
     }]
 }
 
-fn number_to_digit(origin: usize, dot: usize) -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn number_to_digit(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_9(origin, dot));
     states.append(&mut number_to_8(origin, dot));
@@ -612,8 +615,8 @@ fn number_to_digit(origin: usize, dot: usize) -> Vec<State> {
     states
 }
 
-fn number_to_digit_number(origin: usize, dot: usize) -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn number_to_digit_number(origin: usize, dot: usize) -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_9_number(origin, dot));
     states.append(&mut number_to_8_number(origin, dot));
@@ -629,8 +632,8 @@ fn number_to_digit_number(origin: usize, dot: usize) -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_00() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_00() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut sum_to_prod(0, 0));
     states.append(&mut prod_to_factor(0, 0));
@@ -644,8 +647,8 @@ fn loup_vaillant_example_state_00() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_01() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_01() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_1(0, 1));
     states.append(&mut number_to_digit(1, 0));
@@ -660,8 +663,8 @@ fn loup_vaillant_example_state_01() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_02() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_02() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut sum_to_sum_plus_prod(0, 2));
     states.append(&mut prod_to_prod_mul_div_factor(2, 0));
@@ -674,8 +677,8 @@ fn loup_vaillant_example_state_02() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_03() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_03() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut factor_to_lp_sum_rp(2, 1));
     states.append(&mut sum_to_sum_plus_sub_prod(3, 0));
@@ -690,8 +693,8 @@ fn loup_vaillant_example_state_03() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_04() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_04() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_2_number(3, 1));
     states.append(&mut number_to_2(3, 1));
@@ -707,8 +710,8 @@ fn loup_vaillant_example_state_04() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_05() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_05() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut prod_to_prod_mul_factor(3, 2));
     states.append(&mut factor_to_lp_sum_rp(5, 0));
@@ -719,8 +722,8 @@ fn loup_vaillant_example_state_05() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_06() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_06() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_3_number(5, 1));
     states.append(&mut number_to_3(5, 1));
@@ -736,8 +739,8 @@ fn loup_vaillant_example_state_06() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_07() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_07() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut sum_to_sum_sub_prod(3, 2));
     states.append(&mut prod_to_prod_mul_div_factor(7, 0));
@@ -750,8 +753,8 @@ fn loup_vaillant_example_state_07() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_08() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_08() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut number_to_4_number(7, 1));
     states.append(&mut number_to_4(7, 1));
@@ -767,8 +770,8 @@ fn loup_vaillant_example_state_08() -> Vec<State> {
     states
 }
 
-fn loup_vaillant_example_state_09() -> Vec<State> {
-    let mut states: Vec<State> = vec![];
+fn loup_vaillant_example_state_09() -> Vec<IntermediateState> {
+    let mut states: Vec<IntermediateState> = vec![];
 
     states.append(&mut factor_to_lp_sum_rp(2, 3));
     states.append(&mut prod_to_factor(2, 1));
