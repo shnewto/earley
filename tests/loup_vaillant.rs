@@ -3,9 +3,8 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Term;
-use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome, FlippedState};
+use earley::earley::{EarleyChart, EarleyOutcome, EarleyProd, FlippedState, State};
 use linked_hash_set::LinkedHashSet;
-use serde_json::ser::CharEscape::LineFeed;
 
 #[test]
 fn loup_vaillant_example() {
@@ -24,18 +23,15 @@ fn loup_vaillant_example() {
     let sentence = "1+(2*3-4)";
 
     let mut actual: Vec<LinkedHashSet<State>> = vec![];
-    let mut flipped_actual : Vec<LinkedHashSet<FlippedState>> = vec![];
-
+    let mut flipped_actual: Vec<LinkedHashSet<FlippedState>> = vec![];
 
     if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
         actual = res.chart.clone();
         flipped_actual = res.flip_completed();
-
     }
 
-    let expected= loup_vaillant_example_states();
+    let expected = loup_vaillant_example_states();
     assert_eq!(expected, actual);
-
 
     let flipped_expected = loup_vaillant_example_flipped(actual.len());
 
@@ -73,7 +69,6 @@ fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedS
     state_set.insert(FlippedState::new(x, 1));
     flipped[origin] = state_set.clone();
 
-
     state_set = LinkedHashSet::new();
     origin = 2;
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;
@@ -94,7 +89,11 @@ fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedS
     x = sum_to_prod(origin, 1).get(0).unwrap().clone().prod;
     state_set.insert(FlippedState::new(x, 4));
 
-    x = prod_to_prod_mul_factor(origin, 3).get(0).unwrap().clone().prod;
+    x = prod_to_prod_mul_factor(origin, 3)
+        .get(0)
+        .unwrap()
+        .clone()
+        .prod;
     state_set.insert(FlippedState::new(x, 6));
 
     x = prod_to_factor(origin, 1).get(0).unwrap().clone().prod;

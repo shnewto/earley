@@ -3,7 +3,7 @@ extern crate earley;
 extern crate linked_hash_set;
 
 use bnf::Term;
-use earley::earley::{EarleyChart, EarleyProd, State, EarleyOutcome};
+use earley::earley::{EarleyChart, EarleyOutcome, EarleyProd, State};
 use linked_hash_set::LinkedHashSet;
 
 // Begin Wikipedia Example Test
@@ -24,7 +24,7 @@ fn wikipedia_example() {
         // .cloned()
         .collect::<Vec<LinkedHashSet<State>>>();
 
-    let mut actual : Vec<LinkedHashSet<State>> = vec![];
+    let mut actual: Vec<LinkedHashSet<State>> = vec![];
     if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
         actual = res.chart;
     }

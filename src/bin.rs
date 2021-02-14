@@ -21,9 +21,24 @@ fn _print_chart(grammar: Grammar, outcome: EarleyOutcome) {
     }
 }
 
+fn _print_flipped_completed_chart(grammar: Grammar, outcome: EarleyOutcome) {
+    println!("{}", grammar);
+
+    if let EarleyOutcome::Accepted(accepted) = outcome {
+        for (i, states) in accepted.flip_completed().iter().enumerate() {
+            println!("\n=== {} ===", i);
+            for state in states.iter() {
+                println!("{}", state);
+            }
+        }
+    } else {
+        println!("input was rejected");
+    }
+}
+
 fn _print_parse_forest(outcome: &EarleyOutcome) {
     if let EarleyOutcome::Accepted(accepted) = outcome {
-       accepted.parse_forest();
+        let _ = accepted.parse_forest();
     } else {
         println!("input was rejected");
     }
@@ -54,6 +69,7 @@ fn _level_two() -> Result<(), Error> {
     let sentence = "1+(2*3-4)";
     let outcome = EarleyChart::eval(grammar_str, sentence)?;
 
+    // _print_flipped_completed_chart(grammar_str.parse().unwrap(), outcome);
     _print_parse_forest(&outcome);
     // _print_chart(grammar_str.parse().unwrap(), outcome);
 
