@@ -23,9 +23,10 @@ impl Tree {
     }
 
     fn fmt(&self, prefix: String) -> String {
-        let mut value: String = format!("{} [{}]\n{} |", prefix, self.root.prod, prefix);
+
+        let mut value: String = format!("{} {} \n", prefix, self.root.prod);
         for leaf in &self.leaves {
-            value += &*leaf.fmt(prefix.clone() + "");
+            value += &*leaf.fmt(format!("{}| ", prefix));
         }
 
         value
@@ -43,7 +44,9 @@ impl Leaf {
     fn fmt(&self, prefix: String) -> String {
         match self {
             Leaf::Nonterminal(_, t) => t.fmt(prefix),
-            Leaf::Terminal(_, s) => format!("{} [{}]\n", prefix, s),
+            Leaf::Terminal(_, s) => {
+                format!("{} \"{}\"\n", prefix, s)
+            },
         }
     }
 }

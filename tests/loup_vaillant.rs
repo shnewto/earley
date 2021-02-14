@@ -43,8 +43,6 @@ fn loup_vaillant_example() {
     for (i, a) in flipped_actual.iter().enumerate() {
         assert_eq!((&flipped_expected[i], i), (a, i));
     }
-
-    // assert_eq!(flipped_expected, flipped_actual);
 }
 
 fn loup_vaillant_example_flipped(chart_len: usize) -> Vec<LinkedHashSet<FlippedIntermediateState>> {
