@@ -1,6 +1,6 @@
 use crate::error::Error;
-use crate::state::{FlippedIntermediateState, IntermediateState};
-use crate::tree::{Leaf, Tree};
+use crate::istate::{FlippedIState, IState};
+use crate::itree::{IBranch, ITree};
 use bnf::Term;
 use linked_hash_set::LinkedHashSet;
 use std::fmt;
@@ -13,15 +13,15 @@ pub enum EarleyOutcome {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct EarleyAccepted {
-    pub chart: Vec<LinkedHashSet<IntermediateState>>,
-    pub accepted_states: Vec<IntermediateState>,
+    pub chart: Vec<LinkedHashSet<IState>>,
+    pub accepted_states: Vec<IState>,
     pub input: String,
 }
 
 impl EarleyAccepted {
     pub fn new(
-        chart: Vec<LinkedHashSet<IntermediateState>>,
-        accepted_states: Vec<IntermediateState>,
+        chart: Vec<LinkedHashSet<IState>>,
+        accepted_states: Vec<IState>,
         input: String,
     ) -> EarleyAccepted {
         EarleyAccepted {
@@ -33,12 +33,12 @@ impl EarleyAccepted {
 
     fn find_in_chart(
         &self,
-        parent_state: &FlippedIntermediateState,
+        parent_state: &FlippedIState,
         term: &Term,
         i: usize,
         limit: Option<usize>,
-        chart: &[LinkedHashSet<FlippedIntermediateState>],
-    ) -> Vec<FlippedIntermediateState> {
+        chart: &[LinkedHashSet<FlippedIState>],
+    ) -> Vec<FlippedIState> {
         let mut ret = vec![];
         if let Some(state_set) = chart.get(i) {
             for state in state_set {
@@ -60,13 +60,13 @@ impl EarleyAccepted {
     fn construct(
         &self,
         x: usize,
-        state: &FlippedIntermediateState,
-        chart: &[LinkedHashSet<FlippedIntermediateState>],
+        state: &FlippedIState,
+        chart: &[LinkedHashSet<FlippedIState>],
         prefix: String,
-    ) -> Tree {
-        let mut tree = Tree {
+    ) -> ITree {
+        let mut tree = ITree {
             root: state.clone(),
-            leaves: vec![],
+            branches: vec![],
         };
 
         let mut idxs: Vec<usize> = vec![x];
@@ -90,10 +90,10 @@ impl EarleyAccepted {
             for idx in idxs {
                 match term {
                     Term::Nonterminal(_) => {
-                        let res: Vec<FlippedIntermediateState> =
+                        let res: Vec<FlippedIState> =
                             self.find_in_chart(state, term, idx, limit, chart);
                         for s in res {
-                            tree.leaves.push(Leaf::Nonterminal(
+                            tree.branches.push(IBranch::Nonterminal(
                                 idx,
                                 self.construct(idx, &s, chart, prefix.clone() + "\t"),
                             ));
@@ -105,7 +105,8 @@ impl EarleyAccepted {
                     Term::Terminal(symbol) => {
                         if let Some(found) = self.input.chars().nth(idx) {
                             if &found.to_string() == symbol {
-                                tree.leaves.push(Leaf::Terminal(idx, symbol.to_string()));
+                                tree.branches
+                                    .push(IBranch::Terminal(idx, symbol.to_string()));
                                 if term_opt.is_some() {
                                     next_idxs.push(idx + 1);
                                 }
@@ -120,9 +121,9 @@ impl EarleyAccepted {
         tree
     }
 
-    pub fn parse_forest(&self) -> Result<Vec<Tree>, Error> {
+    pub fn parse_forest(&self) -> Result<Vec<ITree>, Error> {
         let flipped_chart = self.flip_completed();
-        let flipped_start_states: Vec<FlippedIntermediateState>;
+        let flipped_start_states: Vec<FlippedIState>;
         if let Some(inital) = flipped_chart.get(0) {
             flipped_start_states = inital
                 .iter()
@@ -135,7 +136,7 @@ impl EarleyAccepted {
             ));
         }
 
-        let mut trees: Vec<Tree> = vec![];
+        let mut trees: Vec<ITree> = vec![];
         for state in flipped_start_states {
             trees.push(self.construct(0, &state, &flipped_chart, "".to_string()));
         }
@@ -143,12 +144,12 @@ impl EarleyAccepted {
         Ok(trees)
     }
 
-    pub fn flip_completed(&self) -> Vec<LinkedHashSet<FlippedIntermediateState>> {
+    pub fn flip_completed(&self) -> Vec<LinkedHashSet<FlippedIState>> {
         let mut flipped = vec![LinkedHashSet::new(); self.chart.len()];
 
         for (i, state_set) in self.get_completed().iter().enumerate() {
             for state in state_set {
-                let flipped_state = FlippedIntermediateState::new(state.prod.clone(), i);
+                let flipped_state = FlippedIState::new(state.prod.clone(), i);
                 flipped[state.origin].insert(flipped_state);
             }
         }
@@ -156,7 +157,7 @@ impl EarleyAccepted {
         flipped
     }
 
-    pub fn get_completed(&self) -> Vec<LinkedHashSet<IntermediateState>> {
+    pub fn get_completed(&self) -> Vec<LinkedHashSet<IState>> {
         let mut only_completed = vec![];
 
         for state_sets in &self.chart {
@@ -173,7 +174,7 @@ impl EarleyAccepted {
         only_completed
     }
 
-    pub fn get_completed_as_vecs(&self) -> Vec<Vec<IntermediateState>> {
+    pub fn get_completed_as_vecs(&self) -> Vec<Vec<IState>> {
         let mut only_completed = vec![];
 
         for state_sets in &self.chart {
@@ -190,17 +191,10 @@ impl EarleyAccepted {
         EarleyAccepted::state_sets_to_vec(only_completed)
     }
 
-    fn state_sets_to_vec(
-        chart: Vec<LinkedHashSet<IntermediateState>>,
-    ) -> Vec<Vec<IntermediateState>> {
+    fn state_sets_to_vec(chart: Vec<LinkedHashSet<IState>>) -> Vec<Vec<IState>> {
         chart
             .iter()
-            .map(|state_set| {
-                state_set
-                    .iter()
-                    .cloned()
-                    .collect::<Vec<IntermediateState>>()
-            })
+            .map(|state_set| state_set.iter().cloned().collect::<Vec<IState>>())
             .collect()
     }
 }

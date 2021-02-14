@@ -3,30 +3,30 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
-pub struct IntermediateState {
+pub struct IState {
     pub origin: usize,
     pub prod: EarleyProd,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
-pub struct FlippedIntermediateState {
+pub struct FlippedIState {
     pub end: usize,
     pub prod: EarleyProd,
 }
 
-impl FlippedIntermediateState {
-    pub fn new(prod: EarleyProd, end: usize) -> FlippedIntermediateState {
-        FlippedIntermediateState { prod, end }
+impl FlippedIState {
+    pub fn new(prod: EarleyProd, end: usize) -> FlippedIState {
+        FlippedIState { prod, end }
     }
 }
 
-impl IntermediateState {
-    pub fn new(prod: EarleyProd, origin: usize) -> IntermediateState {
-        IntermediateState { prod, origin }
+impl IState {
+    pub fn new(prod: EarleyProd, origin: usize) -> IState {
+        IState { prod, origin }
     }
 }
 
-impl fmt::Display for IntermediateState {
+impl fmt::Display for IState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let terms: String = self
             .prod
@@ -48,7 +48,7 @@ impl fmt::Display for IntermediateState {
     }
 }
 
-impl fmt::Display for FlippedIntermediateState {
+impl fmt::Display for FlippedIState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let terms: String = self
             .prod
