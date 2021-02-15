@@ -14,13 +14,13 @@ fn loup_vaillant_example() {
     // Validate against example documented here https://loup-vaillant.fr/tutorials/earley-parsing/parser
 
     let grammar_str = "
-        <Sum>     ::= <Sum> \"+\" <Product> | <Sum> \"-\" <Product> | <Product>
-        <Product> ::= <Product> \"*\" <Factor> | <Product> \"/\" <Factor> | <Factor>
-        <Factor>  ::= \"(\" <Sum> \")\" | <Number>
-        <Number>  ::= \"0\" <Number> | \"1\" <Number> | \"2\" <Number> | \"3\" <Number> |
-                      \"4\" <Number> | \"5\" <Number> | \"6\" <Number> | \"7\" <Number> |
-                      \"8\" <Number> | \"9\" <Number>
-        <Number>  ::= \"0\" | \"1\" | \"2\" | \"3\" | \"4\" | \"5\" | \"6\" | \"7\" | \"8\" | \"9\"
+        <Sum>     ::= <Sum> '+' <Product> | <Sum> '-' <Product> | <Product>
+        <Product> ::= <Product> '*' <Factor> | <Product> '/' <Factor> | <Factor>
+        <Factor>  ::= '(' <Sum> ')' | <Number>
+        <Number>  ::= '0' <Number> | '1' <Number> | '2' <Number> | '3' <Number> |
+                      '4' <Number> | '5' <Number> | '6' <Number> | '7' <Number> |
+                      '8' <Number> | '9' <Number>
+        <Number>  ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
         ";
 
     let sentence = "1+(2*3-4)";
