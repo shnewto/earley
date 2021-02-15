@@ -43,9 +43,9 @@ fn _level_one() -> Result<(), Error> {
     let outcome = EarleyChart::eval(grammar_str, sentence)?;
     println!("{}", outcome);
 
-    if let EarleyOutcome::Accepted(accepted) = outcome {
-        println!("{}", accepted.parse_forest()?[0]);
-    }
+    // if let EarleyOutcome::Accepted(accepted) = outcome {
+    //     println!("{}", accepted.parse_forest()?[0]);
+    // }
 
     Ok(())
 }

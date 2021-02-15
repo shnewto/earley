@@ -22,15 +22,35 @@ impl ITree {
         }
     }
 
-    fn fmt(&self, padding: usize, ppchar: PPChar) -> String {
+    fn fmt(&self, depth: usize, bars: Vec<usize>, ppchar: PPChar) -> String {
         let mut value: String;
-        value = format!("{:>padding$} {}\n", ppchar.get(), self.root.prod, padding=padding);
+        let mut next_bars;
+        match ppchar {
+            PPChar::Last => {
+                next_bars = bars.clone()
+            },
+            PPChar::Mid => {
+                next_bars = bars.clone();
+                next_bars.push(depth*4-4);
+            },
+            PPChar::First => {
+                next_bars = vec![];
+            },
+        }
+
+        value = format!("{:>padding$} {}\n", ppchar.get(), self.root.prod, padding=depth*4);
+        let mut val_chars = value.chars().collect::<Vec<char>>();
+        for (i, bar) in bars.iter().enumerate() {
+                val_chars.insert(bar+i+2, '|');
+        }
+
+        value = val_chars.iter().collect();
 
         for (i, branch) in self.branches.iter().enumerate() {
             if i == self.branches.len() - 1{
-                value += &*branch.fmt(padding+4, PPChar::Last);
+                value += &*branch.fmt(depth+1, next_bars.clone(), PPChar::Last);
             } else {
-                value += &*branch.fmt(padding+4, PPChar::Mid);
+                value += &*branch.fmt(depth+1, next_bars.clone(), PPChar::Mid);
             }
         }
 
@@ -45,11 +65,17 @@ impl IBranch {
             IBranch::Terminal(index, _) => *index,
         }
     }
-    fn fmt(&self, padding: usize, ppchar: PPChar) -> String {
+    fn fmt(&self, depth: usize, bars: Vec<usize>, ppchar: PPChar) -> String {
         match self {
-            IBranch::Nonterminal(_, t) => t.fmt(padding, ppchar),
+            IBranch::Nonterminal(_, t) => t.fmt(depth, bars, ppchar),
             IBranch::Terminal(_, s) =>  {
-                format!("{:>padding$} {}\n", ppchar.get(), s, padding=padding)
+                let value = format!("{:>padding$} {}\n", ppchar.get(), s, padding=depth*4);
+                let mut val_chars = value.chars().collect::<Vec<char>>();
+                for (i, bar) in bars.iter().enumerate() {
+                    val_chars.insert(bar+i+2, '|');
+                }
+
+                val_chars.iter().collect()
             },
         }
     }
@@ -57,13 +83,13 @@ impl IBranch {
 
 impl fmt::Display for IBranch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.fmt(0, PPChar::First))
+        write!(f, "{}", self.fmt(0, vec![], PPChar::First))
     }
 }
 
 impl fmt::Display for ITree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.fmt(0, PPChar::First))
+        write!(f, "{}", self.fmt(0, vec![], PPChar::First))
     }
 }
 

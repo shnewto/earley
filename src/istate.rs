@@ -1,6 +1,7 @@
 use crate::prod::EarleyProd;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::fmt::Debug;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct IState {
@@ -28,46 +29,16 @@ impl IState {
 
 impl fmt::Display for IState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let terms: String = self
-            .prod
-            .rhs
-            .iter()
-            .enumerate()
-            .map(|(i, t)| {
-                if i == self.prod.dot {
-                    format!("{}{:#}", "•", t)
-                } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
-                    format!("{:#}{}", t, "•")
-                } else {
-                    format!("{:#}", t)
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        write!(f, "[{}] {} := {}", self.origin, self.prod.lhs, terms)
+        let mut terms = self.prod.rhs.iter().map(|t| format!("{:#}", t)).collect::<Vec<String>>();
+        terms.insert(self.prod.dot, "•".to_string());
+        write!(f, "[{}] {} := {} ({})", self.origin, self.prod.lhs, terms.join(""), self.prod.dot)
     }
 }
 
 impl fmt::Display for FlippedIState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let terms: String = self
-            .prod
-            .rhs
-            .iter()
-            .enumerate()
-            .map(|(i, t)| {
-                if i == self.prod.dot {
-                    format!("{}{:#}", "•", t)
-                } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
-                    format!("{:#}{}", t, "•")
-                } else {
-                    format!("{:#}", t)
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        write!(f, "{} := {} ({})", self.prod.lhs, terms, self.end)
+        let mut terms = self.prod.rhs.iter().map(|t| format!("{:#}", t)).collect::<Vec<String>>();
+        terms.insert(self.prod.dot, "•".to_string());
+        write!(f, "{} := {} ({})", self.prod.lhs, terms.join(""), self.end)
     }
 }
