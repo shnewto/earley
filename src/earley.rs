@@ -1,7 +1,7 @@
 use crate::error::Error;
+use crate::istate::IState;
 use crate::outcome::{EarleyAccepted, EarleyOutcome};
 use crate::prod::EarleyProd;
-use crate::state::IntermediateState;
 use bnf::{Expression, Grammar, Production, Term};
 use linked_hash_set::LinkedHashSet;
 
@@ -18,14 +18,14 @@ impl EarleyParser {
         })
     }
 
-    fn get_start_states(&self) -> Result<LinkedHashSet<IntermediateState>, Error> {
+    fn get_start_states(&self) -> Result<LinkedHashSet<IState>, Error> {
         match self.grammar.productions_iter().peekable().peek() {
             Some(p) => {
-                let mut state_set: LinkedHashSet<IntermediateState> = LinkedHashSet::new();
+                let mut state_set: LinkedHashSet<IState> = LinkedHashSet::new();
                 for expr in p.rhs_iter() {
                     let terms = expr.terms_iter().cloned().collect::<Vec<Term>>();
                     let prod = EarleyProd::new((p.lhs).clone(), terms, 0);
-                    let state = IntermediateState::new(prod, 0);
+                    let state = IState::new(prod, 0);
                     state_set.insert(state);
                 }
                 Ok(state_set)
@@ -41,7 +41,7 @@ impl EarleyParser {
         let start_states = self.get_start_states()?;
         let input_symbols = self.input.chars().collect::<Vec<char>>();
 
-        let mut chart: Vec<LinkedHashSet<IntermediateState>> =
+        let mut chart: Vec<LinkedHashSet<IState>> =
             vec![LinkedHashSet::new(); input_symbols.len() + 1];
         chart[0] = start_states.clone();
 
@@ -77,16 +77,16 @@ impl EarleyParser {
 
     fn get_accepted(
         &self,
-        start_states: &LinkedHashSet<IntermediateState>,
-        final_chart_states: Option<&LinkedHashSet<IntermediateState>>,
+        start_states: &LinkedHashSet<IState>,
+        final_chart_states: Option<&LinkedHashSet<IState>>,
         input_len: usize,
         chart_len: usize,
-    ) -> Option<Vec<IntermediateState>> {
+    ) -> Option<Vec<IState>> {
         if input_len + 1 != chart_len {
             return None;
         }
 
-        let mut completed: Vec<IntermediateState> = vec![];
+        let mut completed: Vec<IState> = vec![];
         match final_chart_states {
             Some(final_states) => {
                 for start_state in start_states {
@@ -119,7 +119,7 @@ impl EarleyParser {
     /// [https://en.wikipedia.org/wiki/Earley_parser]
     ///
     ///
-    /// For every `state: IntermediateState` in `state_set` where
+    /// For every `state: IState` in `state_set` where
     /// `state.prod.get_next() == Some(bnf::Term::Nonterm(nt))`,
     /// find all productions `prod` in self.grammar where `prod.lhs == nt`
     /// and add a new state to the returned `state_set` for all
@@ -128,11 +128,7 @@ impl EarleyParser {
     /// state.rhs = expr collected into a Vec<Term>
     /// origin = `k` (the index of this state set in the EarleyChart)
     /// dot = 0
-    fn earley_predict(
-        &self,
-        k: usize,
-        state_set: &LinkedHashSet<IntermediateState>,
-    ) -> LinkedHashSet<IntermediateState> {
+    fn earley_predict(&self, k: usize, state_set: &LinkedHashSet<IState>) -> LinkedHashSet<IState> {
         let find_productions_in_grammar = |term: &Term| {
             let mut ret: Vec<&Production> = vec![];
             for p in self.grammar.productions_iter() {
@@ -145,7 +141,7 @@ impl EarleyParser {
             ret
         };
 
-        let mut ret_state_set: LinkedHashSet<IntermediateState> = state_set.clone();
+        let mut ret_state_set: LinkedHashSet<IState> = state_set.clone();
 
         for state in state_set.iter() {
             if let Some(term) = state.prod.get_next() {
@@ -156,7 +152,7 @@ impl EarleyParser {
                         exprs.iter().for_each(|e| {
                             let rhs = e.terms_iter().cloned().collect::<Vec<Term>>();
                             let earley_prod = EarleyProd::new(p.lhs.clone(), rhs, 0);
-                            ret_state_set.insert(IntermediateState::new(earley_prod, k));
+                            ret_state_set.insert(IState::new(earley_prod, k));
                         });
                     });
                 }
@@ -172,18 +168,18 @@ impl EarleyParser {
     /// add (X → α a • β, j) to S(k+1).
     /// [https://en.wikipedia.org/wiki/Earley_parser]
     ///
-    /// For every `curr_state: IntermediateState` in `state_set` where `symbol` is the
+    /// For every `curr_state: IState` in `state_set` where `symbol` is the
     /// char being evaluated from the input string,
     /// `state.prod.get_next() == Some(bnf::Term::Terminal::from_str(symbol)`,
-    /// add `new_state: IntermediateState` to the returned state set, where:
+    /// add `new_state: IState` to the returned state set, where:
     /// new_state = curr_state.clone()
     /// new_state.prod.dot = curr_state.prod.dot + 1
     fn earley_scan(
         &self,
         symbol: String,
-        state_set: &LinkedHashSet<IntermediateState>,
-    ) -> LinkedHashSet<IntermediateState> {
-        let mut ret_state_set: LinkedHashSet<IntermediateState> = LinkedHashSet::new();
+        state_set: &LinkedHashSet<IState>,
+    ) -> LinkedHashSet<IState> {
+        let mut ret_state_set: LinkedHashSet<IState> = LinkedHashSet::new();
 
         for state in state_set.iter() {
             if let Some(term) = state.prod.get_next() {
@@ -206,20 +202,20 @@ impl EarleyParser {
     /// and add (X → α Y • β, i) to S(k).
     /// [https://en.wikipedia.org/wiki/Earley_parser]
     ///
-    /// For every `curr_state: IntermediateState` in `state_set` where
+    /// For every `curr_state: IState` in `state_set` where
     /// curr_state.prod.get_next() == None, find all states in
-    /// the Vec<LinkedHashSet<IntermediateState>> where
+    /// the Vec<LinkedHashSet<IState>> where
     /// `chart_state[curr_state.origin].get_next() == Some(curr_state.prod.lhs)`
     /// and add a state to the returned state set where:
     /// new_state = chart_state.clone()
     /// new_state.dot = chart_state.prod.dot + 1
     fn earley_complete(
         &self,
-        state_set: &LinkedHashSet<IntermediateState>,
-        chart: &[LinkedHashSet<IntermediateState>],
-    ) -> LinkedHashSet<IntermediateState> {
+        state_set: &LinkedHashSet<IState>,
+        chart: &[LinkedHashSet<IState>],
+    ) -> LinkedHashSet<IState> {
         let find_in_chart = |lhs: &Term, index: usize| {
-            let mut ret_states: Vec<IntermediateState> = vec![];
+            let mut ret_states: Vec<IState> = vec![];
             if let Some(states_at_index) = chart.get(index) {
                 for state in states_at_index {
                     if state.prod.get_next() == Some(lhs) {
@@ -230,7 +226,7 @@ impl EarleyParser {
             ret_states
         };
 
-        let mut ret_state_set: LinkedHashSet<IntermediateState> = state_set.clone();
+        let mut ret_state_set: LinkedHashSet<IState> = state_set.clone();
 
         for state in state_set {
             if state.prod.get_next().is_none() {

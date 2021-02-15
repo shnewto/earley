@@ -24,9 +24,7 @@ impl fmt::Display for EarleyProd {
             f,
             "{} := {}",
             self.lhs,
-            self.rhs
-                .iter()
-                .fold(String::new(), |acc, t| format!("{} {}", acc, t))
+            self.rhs.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(" ")
         )
     }
 }
