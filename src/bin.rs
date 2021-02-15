@@ -7,21 +7,8 @@ use earley::error::Error;
 use earley::outcome::EarleyOutcome;
 use std::fs::File;
 use std::io::Write;
-
-// fn _print_flipped_completed_chart(grammar: Grammar, outcome: EarleyOutcome) {
-//     println!("{}", grammar);
-//
-//     if let EarleyOutcome::Accepted(accepted) = outcome {
-//         for (i, states) in accepted.flip_completed().iter().enumerate() {
-//             println!("\n=== {} ===", i);
-//             for state in states.iter() {
-//                 println!("{}", state);
-//             }
-//         }
-//     } else {
-//         println!("input was rejected");
-//     }
-// }
+use bnf::{Grammar};
+use std::str::FromStr;
 
 fn _print_parse_forest(outcome: &EarleyOutcome) {
     if let EarleyOutcome::Accepted(accepted) = outcome {
@@ -31,7 +18,7 @@ fn _print_parse_forest(outcome: &EarleyOutcome) {
     }
 }
 
-fn _level_one() -> Result<(), Error> {
+fn _one() -> Result<(), Error> {
     let grammar_str = "
     <P> ::= <S>
     <S> ::= <S> \"+\" <M> | <M>
@@ -50,7 +37,7 @@ fn _level_one() -> Result<(), Error> {
     Ok(())
 }
 
-fn _level_two() -> Result<(), Error> {
+fn _two() -> Result<(), Error> {
     let grammar_str = "
     <Sum> ::= <Sum> '+' <Product> | <Sum> '-' <Product> | <Product>
     <Product> ::= <Product> '*' <Factor> | <Product> '/' <Factor> | <Factor>
@@ -69,7 +56,29 @@ fn _level_two() -> Result<(), Error> {
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
-    // _level_one()
-    _level_two()
+fn _three() -> Result<(), Error> {
+    let grammar_str = "
+    <Block>      ::=  <If>
+    <Block>      ::= '{' '}'
+    <If>         ::=  'i' 'f' <Block>
+    <If>         ::=  'i' 'f' <Block> 'e' 'l' 's' 'e' <Block>
+    ";
+
+    let sentence = "ifif{}else{}";
+    let grammar = Grammar::from_str(grammar_str)?;
+    // println!("{}", grammar);
+    let outcome = EarleyChart::eval(grammar_str, sentence)?;
+    // println!("{:#}", outcome);
+
+    if let EarleyOutcome::Accepted(accepted) = outcome {
+        println!("{}", accepted.parse_forest()?[0]);
+    }
+
+    Ok(())
 }
+fn main() -> Result<(), Error> {
+    // _one()
+    // _two()
+    _three()
+}
+
