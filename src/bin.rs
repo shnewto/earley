@@ -28,11 +28,13 @@ fn _one() -> Result<(), Error> {
 
     let sentence = "2+3*4";
     let outcome = EarleyChart::eval(grammar_str, sentence)?;
-    println!("{}", outcome);
+    // println!("{}", outcome);
 
-    // if let EarleyOutcome::Accepted(accepted) = outcome {
-    //     println!("{}", accepted.parse_forest()?[0]);
-    // }
+    if let EarleyOutcome::Accepted(accepted) = outcome {
+        for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
+            println!("=== PT ({}) ===\n{}", i, pf);
+        }
+    }
 
     Ok(())
 }
@@ -50,7 +52,9 @@ fn _two() -> Result<(), Error> {
     // println!("{}", outcome);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        println!("{}", accepted.parse_forest()?[0]);
+        for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
+            println!("=== PT ({}) ===\n{}", i, pf);
+        }
     }
 
     Ok(())
@@ -71,7 +75,9 @@ fn _three() -> Result<(), Error> {
     // println!("{:#}", outcome);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        println!("{}", accepted.parse_forest()?[0]);
+        for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
+            println!("=== PT ({}) ===\n{}", i, pf);
+        }
     }
 
     Ok(())
