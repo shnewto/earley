@@ -24,7 +24,11 @@ impl fmt::Display for EarleyProd {
             f,
             "{} := {}",
             self.lhs,
-            self.rhs.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(" ")
+            self.rhs
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
         )
     }
 }

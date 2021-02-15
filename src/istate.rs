@@ -29,15 +29,32 @@ impl IState {
 
 impl fmt::Display for IState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut terms = self.prod.rhs.iter().map(|t| format!("{:#}", t)).collect::<Vec<String>>();
+        let mut terms = self
+            .prod
+            .rhs
+            .iter()
+            .map(|t| format!("{:#}", t))
+            .collect::<Vec<String>>();
         terms.insert(self.prod.dot, "•".to_string());
-        write!(f, "[{}] {} := {} ({})", self.origin, self.prod.lhs, terms.join(""), self.prod.dot)
+        write!(
+            f,
+            "[{}] {} := {} ({})",
+            self.origin,
+            self.prod.lhs,
+            terms.join(""),
+            self.prod.dot
+        )
     }
 }
 
 impl fmt::Display for FlippedIState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut terms = self.prod.rhs.iter().map(|t| format!("{:#}", t)).collect::<Vec<String>>();
+        let mut terms = self
+            .prod
+            .rhs
+            .iter()
+            .map(|t| format!("{:#}", t))
+            .collect::<Vec<String>>();
         terms.insert(self.prod.dot, "•".to_string());
         write!(f, "{} := {} ({})", self.prod.lhs, terms.join(""), self.end)
     }

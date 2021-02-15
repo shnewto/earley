@@ -1,16 +1,16 @@
 use crate::istate::FlippedIState;
+use crate::tree::{Branch, Tree};
+use bnf::{Expression, Production};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use bnf::{Production, Expression};
-use crate::tree::{Tree, Branch};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
 pub struct ITree {
     pub root: FlippedIState,
     pub branches: Vec<IBranch>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
 pub enum IBranch {
     Nonterminal(usize, ITree),
     Terminal(usize, String),
@@ -19,7 +19,10 @@ pub enum IBranch {
 impl ITree {
     pub fn to_tree(&self) -> Tree {
         Tree {
-            production: Production::from_parts(self.root.prod.lhs.clone(), vec![Expression::from_parts(self.root.prod.rhs.clone())]),
+            production: Production::from_parts(
+                self.root.prod.lhs.clone(),
+                vec![Expression::from_parts(self.root.prod.rhs.clone())],
+            ),
             branches: self.branches.iter().map(|b| b.to_branch()).collect(),
         }
     }
@@ -28,31 +31,34 @@ impl ITree {
         let mut value: String;
         let mut next_bars;
         match ppchar {
-            PPChar::Last => {
-                next_bars = bars.clone()
-            },
+            PPChar::Last => next_bars = bars.clone(),
             PPChar::Mid => {
                 next_bars = bars.clone();
-                next_bars.push(depth*4-4);
-            },
+                next_bars.push(depth * 4 - 4);
+            }
             PPChar::First => {
                 next_bars = vec![];
-            },
+            }
         }
 
-        value = format!("{:>padding$} {}\n", ppchar.get(), self.root.prod, padding=depth*4);
+        value = format!(
+            "{:>padding$} {}\n",
+            ppchar.get(),
+            self.root.prod,
+            padding = depth * 4
+        );
         let mut val_chars = value.chars().collect::<Vec<char>>();
         for (i, bar) in bars.iter().enumerate() {
-                val_chars.insert(bar+i+2, '|');
+            val_chars.insert(bar + i + 2, '|');
         }
 
         value = val_chars.iter().collect();
 
         for (i, branch) in self.branches.iter().enumerate() {
-            if i == self.branches.len() - 1{
-                value += &*branch.fmt(depth+1, next_bars.clone(), PPChar::Last);
+            if i == self.branches.len() - 1 {
+                value += &*branch.fmt(depth + 1, next_bars.clone(), PPChar::Last);
             } else {
-                value += &*branch.fmt(depth+1, next_bars.clone(), PPChar::Mid);
+                value += &*branch.fmt(depth + 1, next_bars.clone(), PPChar::Mid);
             }
         }
 
@@ -71,18 +77,40 @@ impl IBranch {
     fn fmt(&self, depth: usize, bars: Vec<usize>, ppchar: PPChar) -> String {
         match self {
             IBranch::Nonterminal(_, t) => t.fmt(depth, bars, ppchar),
-            IBranch::Terminal(_, s) =>  {
-                let value = format!("{:>padding$} {}\n", ppchar.get(), s, padding=depth*4);
+            IBranch::Terminal(_, s) => {
+                let value = format!("{:>padding$} {}\n", ppchar.get(), s, padding = depth * 4);
                 let mut val_chars = value.chars().collect::<Vec<char>>();
                 for (i, bar) in bars.iter().enumerate() {
-                    val_chars.insert(bar+i+2, '|');
+                    val_chars.insert(bar + i + 2, '|');
                 }
 
                 val_chars.iter().collect()
-            },
+            }
         }
     }
 }
+
+impl PartialEq for ITree {
+    fn eq(&self, other: &Self) -> bool {
+        self.root.prod.lhs == other.root.prod.lhs
+            && self.root.prod.rhs == other.root.prod.rhs
+            && self.branches == other.branches
+    }
+}
+
+impl Eq for ITree {}
+
+impl PartialEq for IBranch {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (IBranch::Nonterminal(_, t1), IBranch::Nonterminal(_, t2)) => t1 == t2,
+            (IBranch::Terminal(_, s1), IBranch::Terminal(_, s2)) => s1 == s2,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for IBranch {}
 
 impl fmt::Display for IBranch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -95,7 +123,6 @@ impl fmt::Display for ITree {
         write!(f, "{}", self.fmt(0, vec![], PPChar::First))
     }
 }
-
 
 pub enum PPChar {
     Last,

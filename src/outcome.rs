@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::istate::{FlippedIState, IState};
 use crate::itree::{IBranch, ITree};
-use crate::tree::{Tree};
+use crate::tree::Tree;
 use bnf::Term;
 use linked_hash_set::LinkedHashSet;
 use std::fmt;
@@ -40,22 +40,53 @@ impl EarleyAccepted {
         limit: Option<usize>,
         chart: &[LinkedHashSet<FlippedIState>],
     ) -> Vec<FlippedIState> {
-        let mut ret = vec![];
+        let mut candidates = vec![];
         if let Some(state_set) = chart.get(i) {
             for state in state_set {
                 if (parent_state != state) && term == &state.prod.lhs {
                     if let Some(l) = limit {
                         if state.end < l {
-                            ret.push(state.clone());
+                            candidates.push(state.clone())
                         }
                     } else {
-                        ret.push(state.clone());
+                        candidates.push(state.clone())
                     }
                 }
             }
         }
 
-        ret
+        candidates
+    }
+
+    fn check_next(
+        &self,
+        parent_state: &FlippedIState,
+        term: &Term,
+        idx: usize,
+        limit: Option<usize>,
+        chart: &[LinkedHashSet<FlippedIState>],
+    ) -> bool {
+        match term {
+            Term::Nonterminal(_) => {
+                if !self
+                    .find_in_chart(parent_state, term, idx, limit, chart)
+                    .is_empty()
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            Term::Terminal(symbol) => {
+                if let Some(found) = self.input.chars().nth(idx) {
+                    if &found.to_string() == symbol {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
     }
 
     fn construct(
@@ -91,17 +122,28 @@ impl EarleyAccepted {
             for idx in idxs {
                 match term {
                     Term::Nonterminal(_) => {
-                        let res: Vec<FlippedIState> =
-                            self.find_in_chart(state, term, idx, limit, chart);
-                        for s in res {
-                            tree.branches.push(IBranch::Nonterminal(
-                                idx,
-                                self.construct(idx, &s, chart, prefix.clone() + "\t"),
-                            ));
-                            if term_opt.is_some() {
-                                next_idxs.push(s.end);
+                        // let res: Vec<FlippedIState> =
+                        // if let Some(res) = self.eval(term_opt, idx, chart) {
+                        let res = self.find_in_chart(state, term, idx, limit, chart);
+                            for s in res {
+                                if let Some(t) = term_opt {
+                                    if self.check_next(state, t, s.end, limit, chart) {
+                                        tree.branches.push(IBranch::Nonterminal(
+                                            idx,
+                                            self.construct(idx, &s, chart, prefix.clone() + "\t"),
+                                        ));
+
+                                        if term_opt.is_some() {
+                                            next_idxs.push(s.end);
+                                        }
+                                    }
+                                } else {
+                                    tree.branches.push(IBranch::Nonterminal(
+                                        idx,
+                                        self.construct(idx, &s, chart, prefix.clone() + "\t"),
+                                    ));
+                                }
                             }
-                        }
                     }
                     Term::Terminal(symbol) => {
                         if let Some(found) = self.input.chars().nth(idx) {
@@ -118,6 +160,8 @@ impl EarleyAccepted {
             }
             idxs = next_idxs;
         }
+
+        tree.branches.dedup();
 
         tree
     }
