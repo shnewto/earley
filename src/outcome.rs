@@ -1,9 +1,10 @@
 use crate::error::Error;
 use crate::istate::{FlippedIState, IState};
 use crate::itree::{IBranch, ITree};
-use crate::tree::Tree;
+use crate::tree::{Tree};
 use bnf::Term;
 use linked_hash_set::LinkedHashSet;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -58,43 +59,42 @@ impl EarleyAccepted {
         candidates
     }
 
-    fn check_next(
-        &self,
-        parent_state: &FlippedIState,
-        term: &Term,
-        idx: usize,
-        limit: Option<usize>,
-        chart: &[LinkedHashSet<FlippedIState>],
-    ) -> bool {
-        match term {
-            Term::Nonterminal(_) => {
-                if !self
-                    .find_in_chart(parent_state, term, idx, limit, chart)
-                    .is_empty()
-                {
-                    return true;
-                }
-
-                return false;
-            }
-            Term::Terminal(symbol) => {
-                if let Some(found) = self.input.chars().nth(idx) {
-                    if &found.to_string() == symbol {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-        }
-    }
+    // fn check_next(
+    //     &self,
+    //     parent_state: &FlippedIState,
+    //     term: &Term,
+    //     idx: usize,
+    //     limit: Option<usize>,
+    //     chart: &[LinkedHashSet<FlippedIState>],
+    // ) -> bool {
+    //     match term {
+    //         Term::Nonterminal(_) => {
+    //             if !self
+    //                 .find_in_chart(parent_state, term, idx, limit, chart)
+    //                 .is_empty()
+    //             {
+    //                 return true;
+    //             }
+    //
+    //             return false;
+    //         }
+    //         Term::Terminal(symbol) => {
+    //             if let Some(found) = self.input.chars().nth(idx) {
+    //                 if &found.to_string() == symbol {
+    //                     return true;
+    //                 }
+    //             }
+    //
+    //             return false;
+    //         }
+    //     }
+    // }
 
     fn construct(
         &self,
         x: usize,
         state: &FlippedIState,
         chart: &[LinkedHashSet<FlippedIState>],
-        prefix: String,
     ) -> ITree {
         let mut tree = ITree {
             root: state.clone(),
@@ -106,6 +106,10 @@ impl EarleyAccepted {
         let mut terms = state.prod.rhs.iter();
         let mut term_opt = terms.next();
 
+        let mut candidates: HashMap<usize, IBranch> = HashMap::new();
+        let mut success_indexes: Vec<usize> = vec![];
+        let mut next_idxs: Vec<usize> = vec![];
+
         while let Some(term) = term_opt {
             let mut limit: Option<usize> = None;
             if let Some(n) = terms.clone().peekable().peek() {
@@ -116,53 +120,42 @@ impl EarleyAccepted {
             }
 
             term_opt = terms.next();
-
-            let mut next_idxs: Vec<usize> = vec![];
-
             for idx in idxs {
                 match term {
                     Term::Nonterminal(_) => {
-                        // let res: Vec<FlippedIState> =
-                        // if let Some(res) = self.eval(term_opt, idx, chart) {
                         let res = self.find_in_chart(state, term, idx, limit, chart);
-                            for s in res {
-                                if let Some(t) = term_opt {
-                                    if self.check_next(state, t, s.end, limit, chart) {
-                                        tree.branches.push(IBranch::Nonterminal(
-                                            idx,
-                                            self.construct(idx, &s, chart, prefix.clone() + "\t"),
-                                        ));
-
-                                        if term_opt.is_some() {
-                                            next_idxs.push(s.end);
-                                        }
-                                    }
-                                } else {
-                                    tree.branches.push(IBranch::Nonterminal(
-                                        idx,
-                                        self.construct(idx, &s, chart, prefix.clone() + "\t"),
-                                    ));
-                                }
-                            }
+                        for s in res {
+                            let new_branch =
+                                IBranch::Nonterminal(idx, self.construct(idx, &s, chart));
+                            let insert_at = if term_opt.is_none() {idx} else { next_idxs.push(s.end); s.end };
+                            let _ = candidates.insert(insert_at, new_branch);
+                            success_indexes.push(idx);
+                        }
                     }
                     Term::Terminal(symbol) => {
                         if let Some(found) = self.input.chars().nth(idx) {
                             if &found.to_string() == symbol {
-                                tree.branches
-                                    .push(IBranch::Terminal(idx, symbol.to_string()));
-                                if term_opt.is_some() {
-                                    next_idxs.push(idx + 1);
-                                }
+                                let new_branch = IBranch::Terminal(idx, symbol.to_string());
+                                tree.branches.push(new_branch);
+                                success_indexes.push(idx);
+                                next_idxs.push(idx + 1);
                             }
                         }
                     }
                 }
             }
-            idxs = next_idxs;
+            idxs = next_idxs.clone();
+            // next_idxs.clear();
+        }
+
+        for idx in success_indexes {
+            if let Some(branch) = candidates.get(&idx) {
+                tree.branches.push(branch.clone());
+            }
         }
 
         tree.branches.dedup();
-
+        tree.order();
         tree
     }
 
@@ -183,7 +176,7 @@ impl EarleyAccepted {
 
         let mut itrees: Vec<ITree> = vec![];
         for state in flipped_start_states {
-            itrees.push(self.construct(0, &state, &flipped_chart, "".to_string()));
+            itrees.push(self.construct(0, &state, &flipped_chart));
         }
 
         let trees: Vec<Tree> = itrees.iter().map(|t| t.to_tree()).collect();

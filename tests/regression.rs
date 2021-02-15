@@ -20,14 +20,16 @@ fn wikipedia_parse_forst() {
     let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        let fjson: String = fs::read_to_string("tests/res/wiki_pf.json").unwrap().parse().unwrap();
+        let fjson: String = fs::read_to_string("tests/res/wiki_pf.json")
+            .unwrap()
+            .parse()
+            .unwrap();
         let pf: Vec<Tree> = serde_json::from_str(&fjson).unwrap();
 
         assert_eq!(pf, accepted.parse_forest().unwrap());
     } else {
         assert_eq!("EarleyOutcome::Accepted", "EarleyOutcome::Rejected");
     }
-
 }
 
 #[test]
@@ -43,14 +45,16 @@ fn loup_parse_forst() {
     let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        let fjson: String = fs::read_to_string("tests/res/loup_pf.json").unwrap().parse().unwrap();
+        let fjson: String = fs::read_to_string("tests/res/loup_pf.json")
+            .unwrap()
+            .parse()
+            .unwrap();
         let pf: Vec<Tree> = serde_json::from_str(&fjson).unwrap();
 
         assert_eq!(pf, accepted.parse_forest().unwrap());
     } else {
         assert_eq!("EarleyOutcome::Accepted", "EarleyOutcome::Rejected");
     }
-
 }
 
 #[test]
@@ -66,12 +70,14 @@ fn ambiguous_parse_forst() {
     let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
-        let fjson: String = fs::read_to_string("tests/res/ambiguous_pf.json").unwrap().parse().unwrap();
+        let fjson: String = fs::read_to_string("tests/res/ambiguous_pf.json")
+            .unwrap()
+            .parse()
+            .unwrap();
         let pf: Vec<Tree> = serde_json::from_str(&fjson).unwrap();
 
         assert_eq!(pf, accepted.parse_forest().unwrap());
     } else {
         assert_eq!("EarleyOutcome::Accepted", "EarleyOutcome::Rejected");
     }
-
 }
