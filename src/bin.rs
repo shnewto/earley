@@ -5,18 +5,8 @@ extern crate linked_hash_set;
 use earley::chart::EarleyChart;
 use earley::error::Error;
 use earley::outcome::EarleyOutcome;
-use std::fs::File;
-use std::io::Write;
-use bnf::{Grammar};
-use std::str::FromStr;
-
-fn _print_parse_forest(outcome: &EarleyOutcome) {
-    if let EarleyOutcome::Accepted(accepted) = outcome {
-        let tj = serde_json::to_string(&accepted.parse_forest().unwrap()).unwrap();
-        let mut file = File::create("parse_forest.json").unwrap();
-        let _ = file.write(tj.as_bytes());
-    }
-}
+// use std::fs::File;
+// use std::io::Write;
 
 fn _one() -> Result<(), Error> {
     let grammar_str = "
@@ -31,10 +21,16 @@ fn _one() -> Result<(), Error> {
     // println!("{}", outcome);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
+        // let json_pf = serde_json::to_string(&accepted.parse_forest()?).unwrap();
+        // let mut fout = File::create("./tests/res/wiki_pf.json").unwrap();
+        // let _ = fout.write(json_pf.as_bytes());
+
         for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
             println!("=== PT ({}) ===\n{}", i, pf);
         }
     }
+
+
 
     Ok(())
 }
@@ -52,10 +48,16 @@ fn _two() -> Result<(), Error> {
     // println!("{}", outcome);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
+        // let json_pf = serde_json::to_string(&accepted.parse_forest()?).unwrap();
+        // let mut fout = File::create("./tests/res/loup_pf.json").unwrap();
+        // let _ = fout.write(json_pf.as_bytes());
+
         for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
             println!("=== PT ({}) ===\n{}", i, pf);
         }
     }
+
+
 
     Ok(())
 }
@@ -69,12 +71,14 @@ fn _three() -> Result<(), Error> {
     ";
 
     let sentence = "ifif{}else{}";
-    let grammar = Grammar::from_str(grammar_str)?;
-    // println!("{}", grammar);
     let outcome = EarleyChart::eval(grammar_str, sentence)?;
     // println!("{:#}", outcome);
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
+        // let json_pf = serde_json::to_string(&accepted.parse_forest()?).unwrap();
+        // let mut fout = File::create("./tests/res/ambiguous_pf.json").unwrap();
+        // let _ = fout.write(json_pf.as_bytes());
+
         for (i, pf) in accepted.parse_forest()?.iter().enumerate() {
             println!("=== PT ({}) ===\n{}", i, pf);
         }
@@ -83,8 +87,9 @@ fn _three() -> Result<(), Error> {
     Ok(())
 }
 fn main() -> Result<(), Error> {
-    // _one()
-    // _two()
-    _three()
+    // _one();
+    // _two();
+    // _three();
+    Ok(())
 }
 

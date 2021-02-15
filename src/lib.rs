@@ -9,4 +9,4 @@ pub mod istate;
 mod itree;
 pub mod outcome;
 pub mod prod;
-mod tree;
+pub mod tree;
