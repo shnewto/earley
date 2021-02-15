@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::istate::{FlippedIState, IState};
 use crate::itree::{IBranch, ITree};
+use crate::tree::{Tree};
 use bnf::Term;
 use linked_hash_set::LinkedHashSet;
 use std::fmt;
@@ -121,7 +122,7 @@ impl EarleyAccepted {
         tree
     }
 
-    pub fn parse_forest(&self) -> Result<Vec<ITree>, Error> {
+    pub fn parse_forest(&self) -> Result<Vec<Tree>, Error> {
         let flipped_chart = self.flip_completed();
         let flipped_start_states: Vec<FlippedIState>;
         if let Some(inital) = flipped_chart.get(0) {
@@ -136,10 +137,12 @@ impl EarleyAccepted {
             ));
         }
 
-        let mut trees: Vec<ITree> = vec![];
+        let mut itrees: Vec<ITree> = vec![];
         for state in flipped_start_states {
-            trees.push(self.construct(0, &state, &flipped_chart, "".to_string()));
+            itrees.push(self.construct(0, &state, &flipped_chart, "".to_string()));
         }
+
+        let mut trees: Vec<Tree> = itrees.iter().map(|t| t.to_tree()).collect();
 
         Ok(trees)
     }
