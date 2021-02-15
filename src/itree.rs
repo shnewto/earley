@@ -22,20 +22,18 @@ impl ITree {
         }
     }
 
-    fn fmt(&self, prefix: String, depth: usize) -> String {
+    fn fmt(&self, padding: usize, ppchar: PPChar) -> String {
         let mut value: String;
-        if depth == 0 {
-            value = format!("{:>padding$}└─ {}\n", prefix, self.root.prod, padding=0);
-        } else if self.branches.len() == 1 {
-            value = format!("{:>padding$}└─ {}\n", prefix, self.root.prod, padding=depth);
-        } else {
-            value = format!("{:>padding$}├─ {}\n", prefix, self.root.prod, padding=depth);
+        value = format!("{:>padding$} {}\n", ppchar.get(), self.root.prod, padding=padding);
+
+        for (i, branch) in self.branches.iter().enumerate() {
+            if i == self.branches.len() - 1{
+                value += &*branch.fmt(padding+4, PPChar::Last);
+            } else {
+                value += &*branch.fmt(padding+4, PPChar::Mid);
+            }
         }
 
-        for branch in &self.branches {
-            value += &*branch.fmt(format!("\t{}", prefix), depth);
-            // value = format!("{}{}", value, branch.fmt(format!("{}", value), depth + 1));
-        }
         value
     }
 }
@@ -47,22 +45,41 @@ impl IBranch {
             IBranch::Terminal(index, _) => *index,
         }
     }
-    fn fmt(&self, prefix: String, depth: usize) -> String {
+    fn fmt(&self, padding: usize, ppchar: PPChar) -> String {
         match self {
-            IBranch::Nonterminal(_, t) => t.fmt(prefix, depth),
-            IBranch::Terminal(_, s) =>  format!("{:>padding$}└─ {}\n", prefix, s, padding=depth),
+            IBranch::Nonterminal(_, t) => t.fmt(padding, ppchar),
+            IBranch::Terminal(_, s) =>  {
+                format!("{:>padding$} {}\n", ppchar.get(), s, padding=padding)
+            },
         }
     }
 }
 
 impl fmt::Display for IBranch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.fmt("".to_string(), 0))
+        write!(f, "{}", self.fmt(0, PPChar::First))
     }
 }
 
 impl fmt::Display for ITree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.fmt("".to_string(), 0))
+        write!(f, "{}", self.fmt(0, PPChar::First))
+    }
+}
+
+
+enum PPChar {
+    Last,
+    Mid,
+    First,
+}
+
+impl PPChar {
+    fn get(&self) -> String {
+        match self {
+            PPChar::Last => "└─".to_string(),
+            PPChar::Mid => "├─".to_string(),
+            PPChar::First => "└─".to_string(),
+        }
     }
 }

@@ -37,12 +37,13 @@ impl fmt::Display for IState {
                 if i == self.prod.dot {
                     format!("{}{:#}", "•", t)
                 } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
-                    format!("{:#}{} ", t, "•")
+                    format!("{:#}{}", t, "•")
                 } else {
-                    format!("{:#} ", t)
+                    format!("{:#}", t)
                 }
             })
-            .collect();
+            .collect::<Vec<String>>()
+            .join(" ");
 
         write!(f, "[{}] {} := {}", self.origin, self.prod.lhs, terms)
     }
@@ -59,12 +60,13 @@ impl fmt::Display for FlippedIState {
                 if i == self.prod.dot {
                     format!("{}{:#}", "•", t)
                 } else if i + 1 == self.prod.rhs.len() && self.prod.dot == self.prod.rhs.len() {
-                    format!("{:#}{} ", t, "•")
+                    format!("{:#}{}", t, "•")
                 } else {
-                    format!("{:#} ", t)
+                    format!("{:#}", t)
                 }
             })
-            .collect();
+            .collect::<Vec<String>>()
+            .join(" ");
 
         write!(f, "{} := {} ({})", self.prod.lhs, terms, self.end)
     }
