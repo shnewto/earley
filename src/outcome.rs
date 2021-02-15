@@ -142,7 +142,7 @@ impl EarleyAccepted {
             itrees.push(self.construct(0, &state, &flipped_chart, "".to_string()));
         }
 
-        let mut trees: Vec<Tree> = itrees.iter().map(|t| t.to_tree()).collect();
+        let trees: Vec<Tree> = itrees.iter().map(|t| t.to_tree()).collect();
 
         Ok(trees)
     }
