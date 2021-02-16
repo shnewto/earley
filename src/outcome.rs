@@ -1,10 +1,9 @@
 use crate::error::Error;
 use crate::istate::{FlippedIState, IState};
 use crate::itree::{IBranch, ITree};
-use crate::tree::{Tree};
+use crate::tree::Tree;
 use bnf::Term;
 use linked_hash_set::LinkedHashSet;
-use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -17,14 +16,14 @@ pub enum EarleyOutcome {
 pub struct EarleyAccepted {
     pub chart: Vec<LinkedHashSet<IState>>,
     pub accepted_states: Vec<IState>,
-    pub input: String,
+    pub input: Vec<String>,
 }
 
 impl EarleyAccepted {
     pub fn new(
         chart: Vec<LinkedHashSet<IState>>,
         accepted_states: Vec<IState>,
-        input: String,
+        input: Vec<String>,
     ) -> EarleyAccepted {
         EarleyAccepted {
             chart,
@@ -59,37 +58,6 @@ impl EarleyAccepted {
         candidates
     }
 
-    // fn check_next(
-    //     &self,
-    //     parent_state: &FlippedIState,
-    //     term: &Term,
-    //     idx: usize,
-    //     limit: Option<usize>,
-    //     chart: &[LinkedHashSet<FlippedIState>],
-    // ) -> bool {
-    //     match term {
-    //         Term::Nonterminal(_) => {
-    //             if !self
-    //                 .find_in_chart(parent_state, term, idx, limit, chart)
-    //                 .is_empty()
-    //             {
-    //                 return true;
-    //             }
-    //
-    //             return false;
-    //         }
-    //         Term::Terminal(symbol) => {
-    //             if let Some(found) = self.input.chars().nth(idx) {
-    //                 if &found.to_string() == symbol {
-    //                     return true;
-    //                 }
-    //             }
-    //
-    //             return false;
-    //         }
-    //     }
-    // }
-
     fn construct(
         &self,
         x: usize,
@@ -106,7 +74,7 @@ impl EarleyAccepted {
         let mut terms = state.prod.rhs.iter();
         let mut term_opt = terms.next();
 
-        let mut candidates: HashMap<usize, IBranch> = HashMap::new();
+        let mut candidates: Vec<(usize, IBranch)> = vec![];
         let mut success_indexes: Vec<usize> = vec![];
         let mut next_idxs: Vec<usize> = vec![];
 
@@ -127,14 +95,19 @@ impl EarleyAccepted {
                         for s in res {
                             let new_branch =
                                 IBranch::Nonterminal(idx, self.construct(idx, &s, chart));
-                            let insert_at = if term_opt.is_none() {idx} else { next_idxs.push(s.end); s.end };
-                            let _ = candidates.insert(insert_at, new_branch);
+                            let insert_at = if term_opt.is_none() {
+                                idx
+                            } else {
+                                next_idxs.push(s.end);
+                                s.end
+                            };
+                            let _ = candidates.push((insert_at, new_branch));
                             success_indexes.push(idx);
                         }
                     }
                     Term::Terminal(symbol) => {
-                        if let Some(found) = self.input.chars().nth(idx) {
-                            if &found.to_string() == symbol {
+                        if let Some(found) = self.input.get(idx) {
+                            if found == symbol {
                                 let new_branch = IBranch::Terminal(idx, symbol.to_string());
                                 tree.branches.push(new_branch);
                                 success_indexes.push(idx);
@@ -145,13 +118,17 @@ impl EarleyAccepted {
                 }
             }
             idxs = next_idxs.clone();
-            // next_idxs.clear();
         }
 
         for idx in success_indexes {
-            if let Some(branch) = candidates.get(&idx) {
-                tree.branches.push(branch.clone());
-            }
+            tree.branches.append(
+                &mut candidates
+                    .iter()
+                    .filter(|(i, _)| *i == idx)
+                    .map(|(_, b)| b)
+                    .cloned()
+                    .collect(),
+            );
         }
 
         tree.branches.dedup();

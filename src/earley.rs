@@ -37,9 +37,19 @@ impl EarleyParser {
         }
     }
 
-    pub fn earley_parse(self) -> Result<EarleyOutcome, Error> {
+    pub fn earley_parse(self, split_on: Option<char>) -> Result<EarleyOutcome, Error> {
+        let input_symbols: Vec<String>;
+        if let Some(split_char) = split_on {
+            input_symbols = self
+                .input
+                .split(split_char)
+                .map(|s| s.to_string())
+                .collect();
+        } else {
+            input_symbols = self.input.chars().map(|c| c.to_string()).collect();
+        }
+
         let start_states = self.get_start_states()?;
-        let input_symbols = self.input.chars().collect::<Vec<char>>();
 
         let mut chart: Vec<LinkedHashSet<IState>> =
             vec![LinkedHashSet::new(); input_symbols.len() + 1];
@@ -53,7 +63,7 @@ impl EarleyParser {
 
                 chart[k] = self.earley_predict(k, &chart[k]);
                 if k + 1 < chart.len() && k < input_symbols.len() {
-                    chart[k + 1] = self.earley_scan(input_symbols[k].to_string(), &chart[k]);
+                    chart[k + 1] = self.earley_scan(input_symbols[k].clone(), &chart[k]);
                 }
                 chart[k] = self.earley_complete(&chart[k], &chart);
             }
@@ -68,7 +78,7 @@ impl EarleyParser {
             Ok(EarleyOutcome::Accepted(EarleyAccepted::new(
                 chart,
                 accepted_states,
-                self.input,
+                input_symbols,
             )))
         } else {
             Ok(EarleyOutcome::Rejected)

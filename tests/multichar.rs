@@ -7,29 +7,23 @@ use earley::outcome::EarleyOutcome;
 
 #[test]
 fn multichar_terminals_ok() {
-    let singlechar_terminals_grammar_str = "
-    <Block>      ::=  <If>
-    <Block>      ::= '{' '}'
-    <If>         ::=  'i' 'f' <Block>
-    <If>         ::=  'i' 'f' <Block> 'e' 'l' 's' 'e' <Block>
+    let grammar_str = "
+    <S> ::= <N> <VP>
+    <VP> ::= <V> <NP>
+    <V> ::= 'joined' | 'followed' | 'lost' | 'caught'
+    <N> ::= 'Amethyst' | 'Perl' | 'Garnet' | 'Peridot' | 'Stevonnie' | 'Lapis' | 'friend'
+    <NP> ::= <D> <N>
+    <D> ::= 'their' | 'a'
     ";
 
-    let multichar_terminals_grammar_str = "
-    <Block>      ::=  <If>
-    <Block>      ::= '{}'
-    <If>         ::=  'if' <Block>
-    <If>         ::=  'if' <Block> 'else' <Block>
-    ";
+    let sentence = "Amethyst joined a friend";
 
-    let sentence = "ifif{}else{}";
+    let outcome = EarleyChart::eval(grammar_str, sentence, Some(' '));
 
-    let singlechar_outcome = EarleyChart::eval(singlechar_terminals_grammar_str, sentence).unwrap();
-    let multicharchar_outcome = EarleyChart::eval(multichar_terminals_grammar_str, sentence).unwrap();
+    assert!(outcome.is_ok());
 
-    assert_eq!(singlechar_outcome, multicharchar_outcome);
-
-    if let (EarleyOutcome::Accepted(singlechar_accepted), EarleyOutcome::Accepted(multicharchar_accepted)) = (singlechar_outcome, multicharchar_outcome) {
-        assert_eq!(multicharchar_accepted.parse_forest().unwrap(), singlechar_accepted.parse_forest().unwrap());
+    if let EarleyOutcome::Accepted(accepted) = outcome.unwrap() {
+        assert!(accepted.parse_forest().is_ok());
     } else {
         assert_eq!("EarleyOutcome::Accepted", "EarleyOutcome::Rejected");
     }

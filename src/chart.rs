@@ -7,15 +7,19 @@ use serde::{Deserialize, Serialize};
 pub struct EarleyChart;
 
 impl EarleyChart {
-    pub fn eval(grammar: &str, input: &str) -> Result<EarleyOutcome, Error> {
+    pub fn eval(
+        grammar: &str,
+        input: &str,
+        split_on: Option<char>,
+    ) -> Result<EarleyOutcome, Error> {
         let parser = EarleyParser::new(grammar, input)?;
-        let outcome = parser.earley_parse()?;
+        let outcome = parser.earley_parse(split_on)?;
         Ok(outcome)
     }
 
-    pub fn accept(grammar: &str, input: &str) -> Result<bool, Error> {
+    pub fn accept(grammar: &str, input: &str, split_on: Option<char>) -> Result<bool, Error> {
         let parser = EarleyParser::new(grammar, input)?;
-        let res = parser.earley_parse()?;
+        let res = parser.earley_parse(split_on)?;
         if let EarleyOutcome::Accepted(_) = res {
             Ok(true)
         } else {

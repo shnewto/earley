@@ -17,7 +17,7 @@ fn wikipedia_parse_forst() {
     ";
 
     let sentence = "2+3*4";
-    let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
+    let outcome = EarleyChart::eval(grammar_str, sentence, None).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
         let fjson: String = fs::read_to_string("tests/res/wiki_pf.json")
@@ -42,7 +42,7 @@ fn loup_parse_forst() {
     ";
 
     let sentence = "1+(2*3-4)";
-    let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
+    let outcome = EarleyChart::eval(grammar_str, sentence, None).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
         let fjson: String = fs::read_to_string("tests/res/loup_pf.json")
@@ -67,7 +67,7 @@ fn ambiguous_parse_forst() {
     ";
 
     let sentence = "ifif{}else{}";
-    let outcome = EarleyChart::eval(grammar_str, sentence).unwrap();
+    let outcome = EarleyChart::eval(grammar_str, sentence, None).unwrap();
 
     if let EarleyOutcome::Accepted(accepted) = outcome {
         let fjson: String = fs::read_to_string("tests/res/ambiguous_pf.json")

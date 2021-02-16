@@ -4,13 +4,13 @@ use bnf::{Expression, Production, Term};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ITree {
     pub root: FlippedIState,
     pub branches: Vec<IBranch>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum IBranch {
     Nonterminal(usize, ITree),
     Terminal(usize, String),
@@ -68,12 +68,10 @@ impl ITree {
     pub fn order(&mut self) {
         let mut ordered: Vec<IBranch> = vec![];
         for term in self.root.prod.rhs.clone() {
-            if let Some(b) = self.branches.iter().find(|b|{
-                match b {
-                    IBranch::Nonterminal(_, t) => t.root.prod.lhs  == term,
-                    IBranch::Terminal(_, s) => Term::Terminal(s.to_string()) == term,
-                }
-            }){
+            if let Some(b) = self.branches.iter().find(|b| match b {
+                IBranch::Nonterminal(_, t) => t.root.prod.lhs == term,
+                IBranch::Terminal(_, s) => Term::Terminal(s.to_string()) == term,
+            }) {
                 ordered.push(b.clone());
             }
         }

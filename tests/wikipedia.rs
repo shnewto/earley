@@ -28,7 +28,7 @@ fn wikipedia_example() {
         .collect::<Vec<LinkedHashSet<IState>>>();
 
     let mut actual: Vec<LinkedHashSet<IState>> = vec![];
-    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
+    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence, None) {
         actual = res.chart;
     }
 

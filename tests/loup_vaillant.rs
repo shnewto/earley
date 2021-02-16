@@ -28,7 +28,7 @@ fn loup_vaillant_example() {
     let mut actual: Vec<LinkedHashSet<IState>> = vec![];
     let mut flipped_actual: Vec<LinkedHashSet<FlippedIState>> = vec![];
 
-    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence) {
+    if let Ok(EarleyOutcome::Accepted(res)) = EarleyChart::eval(grammar_str, sentence, None) {
         actual = res.chart.clone();
         flipped_actual = res.flip_completed();
     }

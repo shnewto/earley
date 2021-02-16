@@ -3,7 +3,7 @@ use bnf::Production;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tree {
     pub production: Production,
     pub branches: Vec<Branch>,
@@ -69,7 +69,7 @@ impl PartialEq for Branch {
 
 impl Eq for Branch {}
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Branch {
     Nonterminal(Tree),
     Terminal(String),
